@@ -77,7 +77,7 @@ func (r *TextReporter) writeViolation(w io.Writer, v rules.Violation) {
 	}
 	if v.Line != "" {
 		if v.LineNumber > 0 {
-			fmt.Fprintf(w, "    %s:%d: %s\n", v.FilePath, v.LineNumber, v.Line)
+			fmt.Fprintf(w, "    Line %d: %s\n", v.LineNumber, v.Line)
 		} else {
 			fmt.Fprintf(w, "    SQL: %s\n", v.Line)
 		}
