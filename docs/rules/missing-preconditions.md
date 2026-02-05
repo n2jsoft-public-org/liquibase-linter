@@ -2,7 +2,9 @@
 
 **Severity**: Warning  
 **Category**: Reliability  
-**Status**: ✅ Implemented
+**Status**: ⚠️ Merged into [non-idempotent](non-idempotent.md)
+
+> **Note**: This rule was documented but never actually implemented. Its intended functionality is available in the `non-idempotent` rule with `mode: "risky-only"` (the default behavior).
 
 ## Description
 
@@ -42,12 +44,17 @@ Ensures risky operations have appropriate preconditions.
 
 ## Configuration
 
+This functionality is now available in the `non-idempotent` rule. Use:
+
 ```yaml
 rules:
-  missing-preconditions:
+  non-idempotent:
     enabled: true
     severity: warning
+    mode: "risky-only"  # Default: checks risky operations only
 ```
+
+For detailed configuration options, see [non-idempotent rule documentation](non-idempotent.md).
 
 ## Why this matters
 
@@ -58,3 +65,5 @@ Preconditions help:
 - Enable better error handling with onFail attributes
 
 Preconditions act as a safety net, ensuring changes only execute when the database is in the expected state.
+
+For complete information on why preconditions matter and how to use them effectively, see the [non-idempotent rule documentation](non-idempotent.md#why-this-matters).

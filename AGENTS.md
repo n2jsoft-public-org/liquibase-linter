@@ -457,6 +457,43 @@ The project is considered successful when:
 7. ✅ Successfully integrates with CI/CD pipelines
 8. ✅ Handles edge cases gracefully with helpful error messages
 
+## Roadmap and Task Management
+
+When planning new features or rules:
+
+1. **Create a `roadmap/` directory** in the project root (if it doesn't exist)
+2. **Create individual task files** for each feature/rule with detailed implementation plans
+3. **File naming**: Use kebab-case matching the feature/rule ID (e.g., `mandatory-preconditions.md`)
+4. **File structure**: Each task file should include:
+   - **Objective**: Clear description of what needs to be implemented
+   - **Requirements**: Functional and non-functional requirements
+   - **Implementation Details**: Complete code structure, interfaces, and logic
+   - **Configuration**: YAML schemas and default values
+   - **Testing**: Test cases, fixtures, and validation steps
+   - **Integration Steps**: How to register and enable the feature
+   - **Validation Checklist**: Items to verify before considering the task complete
+   - **Expected Output**: Examples of what users will see
+   - **Dependencies**: Prerequisites and related components
+   - **Notes**: Additional considerations and edge cases
+
+5. **Documentation**: Always create corresponding documentation files in `docs/rules/` before or during implementation
+
+### Example Roadmap Structure
+
+```
+roadmap/
+├── mandatory-preconditions.md    # Detailed implementation plan
+├── label-pattern.md               # Detailed implementation plan
+├── no-manual-transactions.md      # Detailed implementation plan
+└── README.md                      # Overview of planned features
+```
+
+This approach ensures that:
+- Each task is self-contained and thoroughly documented
+- Implementation details are clear and unambiguous
+- Progress can be tracked independently for each feature
+- Future maintainers can understand the design decisions
+
 ## Resources
 
 - [Effective Go](https://go.dev/doc/effective_go)
@@ -467,6 +504,6 @@ The project is considered successful when:
 
 ---
 
-**Last Updated**: February 4, 2026  
+**Last Updated**: February 5, 2026  
 **Version**: 1.0.0  
 **Maintainer**: n2jsoft
