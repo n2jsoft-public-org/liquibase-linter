@@ -14,6 +14,11 @@ type JSONParser struct{}
 
 // Parse parses a JSON changelog file.
 func (p *JSONParser) Parse(filePath string) (*Changelog, error) {
+	return p.ParseWithConfig(filePath, []string{}, "")
+}
+
+// ParseWithConfig parses a JSON changelog file with ignore patterns for filtering includes.
+func (p *JSONParser) ParseWithConfig(filePath string, ignorePatterns []string, basePath string) (*Changelog, error) {
 	// Read file
 	data, err := os.ReadFile(filePath)
 	if err != nil {
@@ -30,6 +35,11 @@ func (p *JSONParser) Parse(filePath string) (*Changelog, error) {
 	ctx := newParseContext(10, true)
 	absPath, _ := filepath.Abs(filePath)
 	ctx.includeChain = []string{absPath}
+
+	// Set ignore patterns if provided
+	if len(ignorePatterns) > 0 && basePath != "" {
+		ctx.SetIgnorePatterns(ignorePatterns, basePath)
+	}
 
 	// Parse the changelog with context - reuse YAML parser logic
 	return p.parseWithContext(filePath, doc, ctx)
@@ -194,6 +204,11 @@ func (p *JSONParser) handleIncludeAll(data any, baseFilePath string, ctx *parseC
 
 	var allChangeSets []ChangeSet
 	for _, file := range files {
+		// Check if file should be ignored
+		if ctx.ShouldIgnore(file) {
+			continue
+		}
+
 		childCtx := &parseContext{
 			visitedFiles:       ctx.visitedFiles,
 			symlinkResolutions: ctx.symlinkResolutions,
@@ -201,6 +216,8 @@ func (p *JSONParser) handleIncludeAll(data any, baseFilePath string, ctx *parseC
 			includeChain:       append(append([]string{}, ctx.includeChain...), file),
 			maxDepth:           ctx.maxDepth,
 			followSymlinks:     ctx.followSymlinks,
+			ignorePatterns:     ctx.ignorePatterns,
+			basePath:           ctx.basePath,
 		}
 
 		changelog, err := parseFileWithContext(file, childCtx)

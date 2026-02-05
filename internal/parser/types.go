@@ -41,6 +41,8 @@ type parseContext struct {
 	includeChain       []string
 	maxDepth           int
 	followSymlinks     bool
+	ignorePatterns     []string // Patterns to ignore during include/includeAll
+	basePath           string   // Base path for relative pattern matching
 }
 
 // newParseContext creates a new parse context with initial values
@@ -52,7 +54,40 @@ func newParseContext(maxDepth int, followSymlinks bool) *parseContext {
 		includeChain:       []string{},
 		maxDepth:           maxDepth,
 		followSymlinks:     followSymlinks,
+		ignorePatterns:     []string{},
+		basePath:           "",
 	}
+}
+
+// SetIgnorePatterns sets ignore patterns and base path for filtering
+func (ctx *parseContext) SetIgnorePatterns(patterns []string, basePath string) {
+	ctx.ignorePatterns = patterns
+	ctx.basePath = basePath
+}
+
+// ShouldIgnore checks if a file path should be ignored based on patterns
+func (ctx *parseContext) ShouldIgnore(filePath string) bool {
+	if len(ctx.ignorePatterns) == 0 || ctx.basePath == "" {
+		return false
+	}
+
+	// Make file path relative to base path for pattern matching
+	relPath, err := GetRelativePath(ctx.basePath, filePath)
+	if err != nil {
+		// If we can't make it relative, use absolute path
+		relPath = filePath
+	}
+
+	// Normalize path separators for consistent matching
+	relPath = NormalizePath(relPath)
+
+	for _, pattern := range ctx.ignorePatterns {
+		matched, err := MatchesResourceFilter(relPath, pattern)
+		if err == nil && matched {
+			return true
+		}
+	}
+	return false
 }
 
 // ChangelogFormat represents the format of a changelog file.
@@ -150,23 +185,31 @@ func DetectFormat(filePath string) ChangelogFormat {
 
 // Parse parses a changelog file using the appropriate parser based on format detection.
 func Parse(filePath string) (*Changelog, error) {
+	return ParseWithConfig(filePath, []string{}, "")
+}
+
+// ParseWithConfig parses a changelog file with ignore patterns for filtering includes.
+// ignorePatterns: glob patterns to ignore during includeAll processing
+// basePath: base path for relative pattern matching
+func ParseWithConfig(filePath string, ignorePatterns []string, basePath string) (*Changelog, error) {
 	format := DetectFormat(filePath)
-	var parser Parser
 
 	switch format {
 	case FormatXML:
-		parser = &XMLParser{}
+		parser := &XMLParser{}
+		return parser.Parse(filePath)
 	case FormatSQL:
-		parser = &SQLParser{}
+		parser := &SQLParser{}
+		return parser.Parse(filePath)
 	case FormatYAML:
-		parser = &YAMLParser{}
+		parser := &YAMLParser{}
+		return parser.ParseWithConfig(filePath, ignorePatterns, basePath)
 	case FormatJSON:
-		parser = &JSONParser{}
+		parser := &JSONParser{}
+		return parser.ParseWithConfig(filePath, ignorePatterns, basePath)
 	default:
 		return nil, fmt.Errorf("unsupported file format: %s", filePath)
 	}
-
-	return parser.Parse(filePath)
 }
 
 // HasRollback checks if a changeset has rollback instructions.

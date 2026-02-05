@@ -54,7 +54,7 @@ func (r *SQLInjectionRule) Check(changelog *parser.Changelog) []Violation {
 						Rule:        r.ID(),
 						Severity:    r.Severity(),
 						Message:     "Potential SQL injection: SQL statement contains string concatenation or variable interpolation",
-						FilePath:    changelog.FilePath,
+						FilePath:    cs.FilePath,
 						ChangeSetID: cs.ID,
 						Author:      cs.Author,
 					})
@@ -114,7 +114,7 @@ func (r *HardcodedCredentialsRule) Check(changelog *parser.Changelog) []Violatio
 						Rule:        r.ID(),
 						Severity:    r.Severity(),
 						Message:     "Hardcoded credentials detected in SQL statement",
-						FilePath:    changelog.FilePath,
+						FilePath:    cs.FilePath,
 						ChangeSetID: cs.ID,
 						Author:      cs.Author,
 					})
@@ -181,7 +181,7 @@ func (r *DangerousOperationsRule) Check(changelog *parser.Changelog) []Violation
 					Rule:        r.ID(),
 					Severity:    r.Severity(),
 					Message:     "Dangerous operation " + operation + " without preconditions or context restrictions",
-					FilePath:    changelog.FilePath,
+					FilePath:    cs.FilePath,
 					ChangeSetID: cs.ID,
 					Author:      cs.Author,
 				})
@@ -238,7 +238,7 @@ func (r *PrivilegeEscalationRule) Check(changelog *parser.Changelog) []Violation
 						Rule:        r.ID(),
 						Severity:    r.Severity(),
 						Message:     "Excessive privilege grant detected",
-						FilePath:    changelog.FilePath,
+						FilePath:    cs.FilePath,
 						ChangeSetID: cs.ID,
 						Author:      cs.Author,
 					})

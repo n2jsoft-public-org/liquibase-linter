@@ -254,6 +254,192 @@ Ensures changesets are properly documented.
 - JIRA ticket references
 - Complex changes have explanations
 
+## File Structure Rules
+
+### file-structure-sprint
+
+**Severity**: Critical  
+**Category**: Best Practices  
+**Status**: ✅ Implemented
+
+Enforces sprint-based directory organization for changelog files.
+
+**What it detects**:
+- Changelog files outside of sprint folders (e.g., `sprints/v116/`)
+- Sprint folders that don't match the configured pattern
+- Proper hierarchical organization of database changes
+
+**Configuration**:
+```yaml
+file_structure:
+  sprint_pattern: "^v\\d+$"  # Matches v116, v117, etc.
+  exclude_patterns:
+    - "**/init/**"  # Exclude initialization scripts
+```
+
+**Example violation**:
+```
+db/
+  changelog/
+    hotfix/           # ❌ Not in a sprint folder
+      tables.xml
+```
+
+**Correct usage**:
+```
+db/
+  changelog/
+    sprints/
+      v116/           # ✅ Matches sprint pattern
+        structure/
+          tables.xml
+    init/             # ✅ Excluded from validation
+      tables.xml
+```
+
+**Benefits**:
+- Clear versioning and release tracking
+- Easy identification of changes by sprint
+- Consistent organization across projects
+- Simplified rollback and deployment strategies
+
+### file-structure-ddl
+
+**Severity**: Critical  
+**Category**: Best Practices  
+**Status**: ✅ Implemented
+
+Enforces DDL (Data Definition Language) changes to be placed in structure directories.
+
+**What it detects**:
+- DDL operations (CREATE TABLE, ALTER TABLE, CREATE INDEX, etc.) in data directories
+- Schema changes mixed with data modifications
+- Structural changes in wrong directory hierarchy
+
+**DDL Operations Detected**:
+- Table operations: `createTable`, `dropTable`, `alterTable`, `renameTable`
+- Column operations: `addColumn`, `dropColumn`, `modifyColumn`, `renameColumn`
+- Index operations: `createIndex`, `dropIndex`
+- Constraint operations: `addPrimaryKey`, `addForeignKeyConstraint`, `addUniqueConstraint`
+- View operations: `createView`, `dropView`
+- Procedure operations: `createProcedure`, `dropProcedure`
+- Sequence operations: `createSequence`, `alterSequence`, `dropSequence`
+- Privilege operations: `grant`, `revoke`, `createUser`, `dropUser`
+
+**Configuration**:
+```yaml
+file_structure:
+  sprint_pattern: "^v\\d+$"
+  structure_pattern: "^\\d+ - structure$"  # Matches "0 - structure", "1 - structure"
+  exclude_patterns:
+    - "**/init/**"
+```
+
+**Example violation**:
+```xml
+<!-- File: db/changelog/sprints/v116/1 - data/tables.xml -->
+<changeSet id="1" author="dev">
+    <createTable tableName="users">  <!-- ❌ DDL in data directory -->
+        <column name="id" type="INT"/>
+    </createTable>
+</changeSet>
+```
+
+**Correct usage**:
+```xml
+<!-- File: db/changelog/sprints/v116/0 - structure/tables.xml -->
+<changeSet id="1" author="dev">
+    <createTable tableName="users">  <!-- ✅ DDL in structure directory -->
+        <column name="id" type="INT"/>
+    </createTable>
+</changeSet>
+```
+
+**Benefits**:
+- Clear separation of schema changes from data changes
+- Easier review of structural modifications
+- Reduced risk of data loss during schema changes
+- Better organization for database architects and DBAs
+
+**Note**: Generic `sql` change types are allowed in both directories since their content cannot be automatically classified.
+
+### file-structure-dml
+
+**Severity**: Critical  
+**Category**: Best Practices  
+**Status**: ✅ Implemented
+
+Enforces DML (Data Manipulation Language) changes to be placed in data directories.
+
+**What it detects**:
+- DML operations (INSERT, UPDATE, DELETE) in structure directories
+- Data modifications mixed with schema changes
+- Data changes in wrong directory hierarchy
+
+**DML Operations Detected**:
+- `insert` - Insert new rows
+- `update` - Update existing rows
+- `delete` - Delete rows
+- `loadData` - Load data from CSV/XML files
+- `loadUpdateData` - Load or update data from files
+
+**Configuration**:
+```yaml
+file_structure:
+  sprint_pattern: "^v\\d+$"
+  data_pattern: "^\\d+ - data$"  # Matches "0 - data", "1 - data"
+  exclude_patterns:
+    - "**/init/**"
+```
+
+**Example violation**:
+```xml
+<!-- File: db/changelog/sprints/v116/0 - structure/seed.xml -->
+<changeSet id="1" author="dev">
+    <insert tableName="users">  <!-- ❌ DML in structure directory -->
+        <column name="username" value="admin"/>
+    </insert>
+</changeSet>
+```
+
+**Correct usage**:
+```xml
+<!-- File: db/changelog/sprints/v116/1 - data/seed.xml -->
+<changeSet id="1" author="dev">
+    <insert tableName="users">  <!-- ✅ DML in data directory -->
+        <column name="username" value="admin"/>
+    </insert>
+</changeSet>
+```
+
+**Benefits**:
+- Clear separation of data changes from schema changes
+- Easier identification of data migrations
+- Better control over data seeding and updates
+- Reduced risk of accidental data modifications during schema changes
+
+**Note**: Generic `sql` change types are allowed in both directories since their content cannot be automatically classified.
+
+### Pattern Customization
+
+All file structure patterns can be customized to match your team's conventions:
+
+```yaml
+file_structure:
+  # Custom sprint pattern (e.g., "sprint-116" instead of "v116")
+  sprint_pattern: "^sprint-\\d+$"
+  
+  # Folder names without numbers
+  structure_pattern: "^structure$"
+  data_pattern: "^data$"
+  
+  # Multiple exclude patterns for migrations
+  exclude_patterns:
+    - "**/init/**"
+    - "**/legacy/**"
+    - "**/hotfix/**"
+```
+
 ## Configuring Rules
 
 Rules can be enabled/disabled and their severity adjusted in the configuration file:

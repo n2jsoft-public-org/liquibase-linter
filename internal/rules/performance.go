@@ -82,7 +82,7 @@ func (r *MissingIndexRule) Check(changelog *parser.Changelog) []Violation {
 							Rule:        r.ID(),
 							Severity:    r.Severity(),
 							Message:     "Foreign key on column '" + change.ColumnName + "' lacks a corresponding index",
-							FilePath:    changelog.FilePath,
+							FilePath:    cs.FilePath,
 							ChangeSetID: cs.ID,
 							Author:      cs.Author,
 						})
@@ -148,7 +148,7 @@ func (r *TableLockRule) Check(changelog *parser.Changelog) []Violation {
 						Rule:        r.ID(),
 						Severity:    r.Severity(),
 						Message:     "Operation may cause table locks in production (consider using context or online DDL)",
-						FilePath:    changelog.FilePath,
+						FilePath:    cs.FilePath,
 						ChangeSetID: cs.ID,
 						Author:      cs.Author,
 					})
@@ -203,7 +203,7 @@ func (r *LargeDataOperationRule) Check(changelog *parser.Changelog) []Violation 
 					Rule:        r.ID(),
 					Severity:    r.Severity(),
 					Message:     "UPDATE statement without WHERE clause may affect all rows",
-					FilePath:    changelog.FilePath,
+					FilePath:    cs.FilePath,
 					ChangeSetID: cs.ID,
 					Author:      cs.Author,
 				})
@@ -215,7 +215,7 @@ func (r *LargeDataOperationRule) Check(changelog *parser.Changelog) []Violation 
 					Rule:        r.ID(),
 					Severity:    SeverityWarning, // More severe for DELETE
 					Message:     "DELETE statement without WHERE clause will delete all rows",
-					FilePath:    changelog.FilePath,
+					FilePath:    cs.FilePath,
 					ChangeSetID: cs.ID,
 					Author:      cs.Author,
 				})
@@ -262,7 +262,7 @@ func (r *SelectStarRule) Check(changelog *parser.Changelog) []Violation {
 					Rule:        r.ID(),
 					Severity:    r.Severity(),
 					Message:     "SELECT * detected; specify explicit columns for better performance and maintainability",
-					FilePath:    changelog.FilePath,
+					FilePath:    cs.FilePath,
 					ChangeSetID: cs.ID,
 					Author:      cs.Author,
 				})

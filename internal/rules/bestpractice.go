@@ -41,7 +41,7 @@ func (r *MissingRollbackRule) Check(changelog *parser.Changelog) []Violation {
 				Rule:        r.ID(),
 				Severity:    r.Severity(),
 				Message:     "Changeset lacks rollback instructions",
-				FilePath:    changelog.FilePath,
+				FilePath:    cs.FilePath,
 				ChangeSetID: cs.ID,
 				Author:      cs.Author,
 			})
@@ -105,7 +105,7 @@ func (r *NonIdempotentChangesRule) Check(changelog *parser.Changelog) []Violatio
 					Rule:        r.ID(),
 					Severity:    r.Severity(),
 					Message:     "Change type '" + change.Type + "' may fail on re-run without preconditions",
-					FilePath:    changelog.FilePath,
+					FilePath:    cs.FilePath,
 					ChangeSetID: cs.ID,
 					Author:      cs.Author,
 				})
@@ -169,7 +169,7 @@ func (r *NamingConventionRule) Check(changelog *parser.Changelog) []Violation {
 					Rule:        r.ID(),
 					Severity:    r.Severity(),
 					Message:     "Invalid naming convention for " + objectType + " '" + name + "' (should be lowercase snake_case)",
-					FilePath:    changelog.FilePath,
+					FilePath:    cs.FilePath,
 					ChangeSetID: cs.ID,
 					Author:      cs.Author,
 				})
@@ -213,7 +213,7 @@ func (r *ChangesetDocumentationRule) Check(changelog *parser.Changelog) []Violat
 				Rule:        r.ID(),
 				Severity:    r.Severity(),
 				Message:     "Changeset lacks documentation comment",
-				FilePath:    changelog.FilePath,
+				FilePath:    cs.FilePath,
 				ChangeSetID: cs.ID,
 				Author:      cs.Author,
 			})
@@ -265,7 +265,7 @@ func (r *ContextMisuseRule) Check(changelog *parser.Changelog) []Violation {
 							Rule:        r.ID(),
 							Severity:    r.Severity(),
 							Message:     "Dangerous operation without context restriction (may run in production)",
-							FilePath:    changelog.FilePath,
+							FilePath:    cs.FilePath,
 							ChangeSetID: cs.ID,
 							Author:      cs.Author,
 						})

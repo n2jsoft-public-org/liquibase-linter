@@ -230,6 +230,187 @@ XML format for CI/CD systems:
 liquibase-linter check --format=junit db/changelog/
 ```
 
+## File Structure Configuration
+
+Configure file organization rules for sprint-based development workflows.
+
+### Overview
+
+The file structure configuration enforces a consistent directory organization for your changelog files:
+
+```
+db/
+  changelog/
+    sprints/
+      v116/              # Sprint version folder
+        0 - structure/   # DDL changes (CREATE, ALTER, DROP)
+        1 - data/        # DML changes (INSERT, UPDATE, DELETE)
+      v117/
+        0 - structure/
+        1 - data/
+    init/                # Excluded from validation
+      tables/
+      data/
+```
+
+### Configuration Options
+
+```yaml
+file_structure:
+  # Sprint folder pattern (regex)
+  # Default: ^v\d+$ (matches v116, v117, etc.)
+  sprint_pattern: "^v\\d+$"
+  
+  # Structure folder pattern (regex)
+  # Default: ^\d+ - structure$ (matches "0 - structure", "1 - structure")
+  structure_pattern: "^\\d+ - structure$"
+  
+  # Data folder pattern (regex)
+  # Default: ^\d+ - data$ (matches "0 - data", "1 - data")
+  data_pattern: "^\\d+ - data$"
+  
+  # Glob patterns for paths to exclude from validation
+  # Default: ["**/init/**"]
+  exclude_patterns:
+    - "**/init/**"
+    - "**/legacy/**"
+```
+
+### Pattern Examples
+
+#### Sprint Patterns
+
+```yaml
+file_structure:
+  # Pattern: v116, v117, v118
+  sprint_pattern: "^v\\d+$"
+  
+  # Pattern: sprint-116, sprint-117
+  sprint_pattern: "^sprint-\\d+$"
+  
+  # Pattern: v1.16, v1.17
+  sprint_pattern: "^v\\d+\\.\\d+$"
+  
+  # Pattern: 2024-Q1, 2024-Q2
+  sprint_pattern: "^\\d{4}-Q[1-4]$"
+```
+
+#### Folder Patterns
+
+```yaml
+file_structure:
+  # Numbered folders with hyphens: "0 - structure", "1 - data"
+  structure_pattern: "^\\d+ - structure$"
+  data_pattern: "^\\d+ - data$"
+  
+  # Simple folder names: "structure", "data"
+  structure_pattern: "^structure$"
+  data_pattern: "^data$"
+  
+  # Numbered without spaces: "0-structure", "1-data"
+  structure_pattern: "^\\d+-structure$"
+  data_pattern: "^\\d+-data$"
+```
+
+#### Exclude Patterns
+
+```yaml
+file_structure:
+  exclude_patterns:
+    # Exclude all files in init directories
+    - "**/init/**"
+    
+    # Exclude legacy migration paths
+    - "**/legacy/**"
+    - "**/archive/**"
+    
+    # Exclude hotfix directories (not sprint-based)
+    - "**/hotfix/**"
+    - "**/emergency/**"
+    
+    # Exclude test fixtures
+    - "**/test/**"
+    - "**/fixtures/**"
+```
+
+### Use Cases
+
+#### Agile Sprint-Based Development
+
+Organize changes by sprint with clear separation of DDL and DML:
+
+```yaml
+file_structure:
+  sprint_pattern: "^v\\d+$"
+  structure_pattern: "^0 - structure$"
+  data_pattern: "^1 - data$"
+  exclude_patterns:
+    - "**/init/**"
+```
+
+#### Quarterly Releases
+
+Organize by quarters:
+
+```yaml
+file_structure:
+  sprint_pattern: "^\\d{4}-Q[1-4]$"  # 2024-Q1, 2024-Q2, etc.
+  structure_pattern: "^structure$"
+  data_pattern: "^data$"
+  exclude_patterns:
+    - "**/baseline/**"
+```
+
+#### Migration from Legacy Structure
+
+Gradually adopt the structure by excluding old directories:
+
+```yaml
+file_structure:
+  sprint_pattern: "^v\\d+$"
+  structure_pattern: "^\\d+ - structure$"
+  data_pattern: "^\\d+ - data$"
+  exclude_patterns:
+    - "**/init/**"
+    - "**/legacy/**"
+    - "**/v1/**"   # Old version format
+    - "**/v2/**"
+```
+
+### Related Rules
+
+The file structure configuration controls three rules:
+
+- **file-structure-sprint**: Ensures files are in sprint folders
+- **file-structure-ddl**: Ensures DDL changes are in structure directories
+- **file-structure-dml**: Ensures DML changes are in data directories
+
+Enable or disable these rules individually:
+
+```yaml
+rules:
+  file-structure-sprint:
+    enabled: true
+    severity: critical
+  
+  file-structure-ddl:
+    enabled: true
+    severity: critical
+  
+  file-structure-dml:
+    enabled: true
+    severity: critical
+```
+
+### Benefits
+
+- **Clear Organization**: Easy to find and review changes by sprint
+- **Separation of Concerns**: DDL and DML changes are clearly separated
+- **Release Management**: Simple to identify changes for specific releases
+- **Rollback Strategy**: Easier to rollback specific sprints or change types
+- **Team Collaboration**: Reduces merge conflicts and improves clarity
+- **Audit Trail**: Clear history of when and why changes were made
+
 ## Environment Variables
 
 (To be implemented)
