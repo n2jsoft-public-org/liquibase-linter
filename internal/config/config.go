@@ -17,14 +17,23 @@ type Config struct {
 	Output            OutputConfig          `yaml:"output"`
 	Parser            ParserConfig          `yaml:"parser"`
 	FileStructure     FileStructureConfig   `yaml:"file_structure"`
+	LabelPattern      LabelPatternConfig    `yaml:"label_pattern"`
 	SeverityThreshold string                `yaml:"severity_threshold"`
 }
 
 // RuleConfig represents configuration for a single rule.
 type RuleConfig struct {
-	Enabled  bool   `yaml:"enabled"`
-	Severity string `yaml:"severity"`
+	Enabled         bool     `yaml:"enabled"`
+	Severity        string   `yaml:"severity"`
+	Mode            string   `yaml:"mode"`
+	ExcludePatterns []string `yaml:"exclude_patterns"`
 }
+
+// Mode constants for non-idempotent rule
+const (
+	ModeRiskyOnly = "risky-only"
+	ModeAll       = "all"
+)
 
 // OutputConfig represents output formatting configuration.
 type OutputConfig struct {
@@ -63,6 +72,25 @@ type FileStructureConfig struct {
 	SprintBasePath string `yaml:"sprint_base_path"`
 }
 
+// LabelPatternConfig represents configuration for label pattern rule.
+type LabelPatternConfig struct {
+	// Enabled determines if label pattern validation is active.
+	Enabled bool `yaml:"enabled"`
+	// Severity is the severity level for violations (info, warning, critical).
+	Severity string `yaml:"severity"`
+	// Pattern is a single regex pattern for valid labels (e.g., "^v\\d+$").
+	Pattern string `yaml:"pattern"`
+	// Patterns is a list of regex patterns (alternative to single Pattern).
+	// Labels matching any pattern are considered valid.
+	Patterns []string `yaml:"patterns"`
+	// RequireLabel determines if changesets must have at least one label.
+	// Default: true
+	RequireLabel bool `yaml:"require_label"`
+	// ExcludePatterns are glob patterns to exclude from label validation.
+	// Default: ["**/init/**"]
+	ExcludePatterns []string `yaml:"exclude_patterns"`
+}
+
 // Default returns a Config with default values.
 func Default() *Config {
 	return &Config{
@@ -84,8 +112,10 @@ func Default() *Config {
 				Severity: "warning",
 			},
 			"non-idempotent": {
-				Enabled:  true,
-				Severity: "warning",
+				Enabled:         true,
+				Severity:        "warning",
+				Mode:            ModeRiskyOnly,
+				ExcludePatterns: []string{"**/init/**", "**/seed/**"},
 			},
 		},
 		Ignore: []string{},
@@ -104,6 +134,13 @@ func Default() *Config {
 			DataPattern:      `(?i)^\d+\s*-\s*data$`,
 			ExcludePatterns:  []string{"**/init/**"},
 			SprintBasePath:   "",
+		},
+		LabelPattern: LabelPatternConfig{
+			Enabled:         false, // Disabled by default (opt-in)
+			Severity:        "warning",
+			Pattern:         `^v\d+$`,
+			RequireLabel:    true,
+			ExcludePatterns: []string{"**/init/**"},
 		},
 		SeverityThreshold: "warning",
 	}

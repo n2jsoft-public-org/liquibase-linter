@@ -59,6 +59,10 @@ rules:
   non-idempotent:
     enabled: true
     severity: warning
+    mode: "risky-only"  # Options: "risky-only" (default), "all"
+    exclude_patterns:
+      - "**/init/**"
+      - "**/seed/**"
 
 # File patterns to ignore
 ignore:
@@ -116,6 +120,8 @@ Each rule can be configured with the following properties:
 
 - **enabled**: Whether the rule is active (default: true)
 - **severity**: Rule severity level - `info`, `warning`, or `critical`
+- **mode**: (non-idempotent only) Enforcement mode - `risky-only` or `all`
+- **exclude_patterns**: (non-idempotent only) Glob patterns to exclude from checks
 
 ### Available Rules
 
@@ -123,10 +129,36 @@ Each rule can be configured with the following properties:
 - **hardcoded-credentials**: Find hardcoded passwords and API keys
 - **dangerous-operations**: Detect DROP/TRUNCATE without preconditions
 - **missing-rollback**: Ensure changesets have rollback scripts
-- **non-idempotent**: Detect non-idempotent changes
+- **non-idempotent**: Detect non-idempotent changes (supports modes and exclude patterns)
 - **sprint-folder-structure**: Enforce sprint-based folder organization
 - **ddl-location**: Ensure DDL changes are in structure directories
 - **dml-location**: Ensure DML changes are in data directories
+
+### Non-Idempotent Rule Configuration
+
+The `non-idempotent` rule supports additional configuration options:
+
+```yaml
+rules:
+  non-idempotent:
+    enabled: true
+    severity: warning
+    mode: "risky-only"  # or "all"
+    exclude_patterns:
+      - "**/init/**"
+      - "**/seed/**"
+```
+
+**Mode Options:**
+- **risky-only** (default): Only checks specific risky operations (CREATE TABLE, ADD COLUMN, etc.)
+- **all**: Requires preconditions on every changeset (strictest enforcement)
+
+**Exclude Patterns:**
+- Use glob patterns with `**` for recursive directory matching
+- Default patterns: `**/init/**`, `**/seed/**`
+- Useful for exempting initialization scripts, seed data, and test fixtures
+
+For more details, see the [non-idempotent rule documentation](rules/non-idempotent.md).
 
 ## File Structure Configuration
 

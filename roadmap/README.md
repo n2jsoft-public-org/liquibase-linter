@@ -6,7 +6,7 @@ This directory contains detailed implementation plans for planned features and r
 
 ### 1. Enhance Non-Idempotent Rule (MERGED: mandatory-preconditions + missing-preconditions)
 **File**: [enhance-non-idempotent-rule.md](enhance-non-idempotent-rule.md)  
-**Status**: 📋 Planned  
+**Status**: ✅ Implemented  
 **Priority**: High  
 **Effort**: 7-8 hours
 

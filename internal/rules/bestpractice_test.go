@@ -61,21 +61,28 @@ func TestMissingRollbackRule_Check(t *testing.T) {
 }
 
 func TestNonIdempotentChangesRule_Check(t *testing.T) {
-	rule := &NonIdempotentChangesRule{}
-
 	tests := []struct {
 		name           string
+		config         config.RuleConfig
 		changelog      *parser.Changelog
 		wantViolations int
+		wantMessage    string
 	}{
 		{
-			name: "createTable with preconditions",
+			name: "risky-only mode: createTable with preconditions - no violation",
+			config: config.RuleConfig{
+				Enabled:         true,
+				Severity:        "warning",
+				Mode:            config.ModeRiskyOnly,
+				ExcludePatterns: []string{},
+			},
 			changelog: &parser.Changelog{
 				FilePath: "test.xml",
 				ChangeSets: []parser.ChangeSet{
 					{
-						ID:     "1",
-						Author: "test",
+						ID:       "1",
+						Author:   "test",
+						FilePath: "db/changelog/test.xml",
 						Preconditions: &parser.Precondition{
 							Type: "tableExists",
 						},
@@ -88,13 +95,20 @@ func TestNonIdempotentChangesRule_Check(t *testing.T) {
 			wantViolations: 0,
 		},
 		{
-			name: "createTable without preconditions",
+			name: "risky-only mode: createTable without preconditions - violation",
+			config: config.RuleConfig{
+				Enabled:         true,
+				Severity:        "warning",
+				Mode:            config.ModeRiskyOnly,
+				ExcludePatterns: []string{},
+			},
 			changelog: &parser.Changelog{
 				FilePath: "test.xml",
 				ChangeSets: []parser.ChangeSet{
 					{
 						ID:            "1",
 						Author:        "test",
+						FilePath:      "db/changelog/test.xml",
 						Preconditions: nil,
 						Changes: []parser.Change{
 							{Type: "createTable", TableName: "users"},
@@ -103,15 +117,23 @@ func TestNonIdempotentChangesRule_Check(t *testing.T) {
 				},
 			},
 			wantViolations: 1,
+			wantMessage:    "Changeset with risky operation 'createTable' requires preconditions (mode: risky-only)",
 		},
 		{
-			name: "runAlways set",
+			name: "risky-only mode: runAlways set - no violation",
+			config: config.RuleConfig{
+				Enabled:         true,
+				Severity:        "warning",
+				Mode:            config.ModeRiskyOnly,
+				ExcludePatterns: []string{},
+			},
 			changelog: &parser.Changelog{
 				FilePath: "test.xml",
 				ChangeSets: []parser.ChangeSet{
 					{
 						ID:        "1",
 						Author:    "test",
+						FilePath:  "db/changelog/test.xml",
 						RunAlways: true,
 						Changes: []parser.Change{
 							{Type: "createTable", TableName: "users"},
@@ -121,13 +143,234 @@ func TestNonIdempotentChangesRule_Check(t *testing.T) {
 			},
 			wantViolations: 0,
 		},
+		{
+			name: "risky-only mode: non-risky operation without preconditions - no violation",
+			config: config.RuleConfig{
+				Enabled:         true,
+				Severity:        "warning",
+				Mode:            config.ModeRiskyOnly,
+				ExcludePatterns: []string{},
+			},
+			changelog: &parser.Changelog{
+				FilePath: "test.xml",
+				ChangeSets: []parser.ChangeSet{
+					{
+						ID:       "1",
+						Author:   "test",
+						FilePath: "db/changelog/test.xml",
+						Changes: []parser.Change{
+							{Type: "insert", TableName: "users"},
+						},
+					},
+				},
+			},
+			wantViolations: 0,
+		},
+		{
+			name: "all mode: any changeset without preconditions - violation",
+			config: config.RuleConfig{
+				Enabled:         true,
+				Severity:        "warning",
+				Mode:            config.ModeAll,
+				ExcludePatterns: []string{},
+			},
+			changelog: &parser.Changelog{
+				FilePath: "test.xml",
+				ChangeSets: []parser.ChangeSet{
+					{
+						ID:       "1",
+						Author:   "test",
+						FilePath: "db/changelog/test.xml",
+						Changes: []parser.Change{
+							{Type: "insert", TableName: "users"},
+						},
+					},
+				},
+			},
+			wantViolations: 1,
+			wantMessage:    "Changeset requires preconditions (mode: all)",
+		},
+		{
+			name: "all mode: changeset with preconditions - no violation",
+			config: config.RuleConfig{
+				Enabled:         true,
+				Severity:        "warning",
+				Mode:            config.ModeAll,
+				ExcludePatterns: []string{},
+			},
+			changelog: &parser.Changelog{
+				FilePath: "test.xml",
+				ChangeSets: []parser.ChangeSet{
+					{
+						ID:       "1",
+						Author:   "test",
+						FilePath: "db/changelog/test.xml",
+						Preconditions: &parser.Precondition{
+							Type: "tableExists",
+						},
+						Changes: []parser.Change{
+							{Type: "insert", TableName: "users"},
+						},
+					},
+				},
+			},
+			wantViolations: 0,
+		},
+		{
+			name: "exclude pattern: **/init/** - no violation",
+			config: config.RuleConfig{
+				Enabled:         true,
+				Severity:        "warning",
+				Mode:            config.ModeRiskyOnly,
+				ExcludePatterns: []string{"**/init/**"},
+			},
+			changelog: &parser.Changelog{
+				FilePath: "init/test.xml",
+				ChangeSets: []parser.ChangeSet{
+					{
+						ID:       "1",
+						Author:   "test",
+						FilePath: "db/changelog/init/0-structure/tables.xml",
+						Changes: []parser.Change{
+							{Type: "createTable", TableName: "users"},
+						},
+					},
+				},
+			},
+			wantViolations: 0,
+		},
+		{
+			name: "exclude pattern: **/seed/** - no violation",
+			config: config.RuleConfig{
+				Enabled:         true,
+				Severity:        "warning",
+				Mode:            config.ModeRiskyOnly,
+				ExcludePatterns: []string{"**/seed/**"},
+			},
+			changelog: &parser.Changelog{
+				FilePath: "seed/test.xml",
+				ChangeSets: []parser.ChangeSet{
+					{
+						ID:       "1",
+						Author:   "test",
+						FilePath: "db/changelog/seed/data.xml",
+						Changes: []parser.Change{
+							{Type: "createTable", TableName: "users"},
+						},
+					},
+				},
+			},
+			wantViolations: 0,
+		},
+		{
+			name: "exclude pattern: custom pattern db/test/** - no violation",
+			config: config.RuleConfig{
+				Enabled:         true,
+				Severity:        "warning",
+				Mode:            config.ModeRiskyOnly,
+				ExcludePatterns: []string{"db/test/**"},
+			},
+			changelog: &parser.Changelog{
+				FilePath: "db/test/test.xml",
+				ChangeSets: []parser.ChangeSet{
+					{
+						ID:       "1",
+						Author:   "test",
+						FilePath: "db/test/tables.xml",
+						Changes: []parser.Change{
+							{Type: "createTable", TableName: "users"},
+						},
+					},
+				},
+			},
+			wantViolations: 0,
+		},
+		{
+			name: "not matching exclude pattern - violation",
+			config: config.RuleConfig{
+				Enabled:         true,
+				Severity:        "warning",
+				Mode:            config.ModeRiskyOnly,
+				ExcludePatterns: []string{"**/init/**"},
+			},
+			changelog: &parser.Changelog{
+				FilePath: "sprints/v123/test.xml",
+				ChangeSets: []parser.ChangeSet{
+					{
+						ID:       "1",
+						Author:   "test",
+						FilePath: "db/changelog/sprints/v123/0-structure/tables.xml",
+						Changes: []parser.Change{
+							{Type: "createTable", TableName: "users"},
+						},
+					},
+				},
+			},
+			wantViolations: 1,
+			wantMessage:    "Changeset with risky operation 'createTable' requires preconditions (mode: risky-only)",
+		},
+		{
+			name: "default mode when empty - defaults to risky-only",
+			config: config.RuleConfig{
+				Enabled:         true,
+				Severity:        "warning",
+				Mode:            "", // Empty mode
+				ExcludePatterns: []string{},
+			},
+			changelog: &parser.Changelog{
+				FilePath: "test.xml",
+				ChangeSets: []parser.ChangeSet{
+					{
+						ID:       "1",
+						Author:   "test",
+						FilePath: "db/changelog/test.xml",
+						Changes: []parser.Change{
+							{Type: "insert", TableName: "users"},
+						},
+					},
+				},
+			},
+			wantViolations: 0, // insert is not risky, so no violation in risky-only mode
+		},
+		{
+			name: "multiple risky operations - reports once per changeset",
+			config: config.RuleConfig{
+				Enabled:         true,
+				Severity:        "warning",
+				Mode:            config.ModeRiskyOnly,
+				ExcludePatterns: []string{},
+			},
+			changelog: &parser.Changelog{
+				FilePath: "test.xml",
+				ChangeSets: []parser.ChangeSet{
+					{
+						ID:       "1",
+						Author:   "test",
+						FilePath: "db/changelog/test.xml",
+						Changes: []parser.Change{
+							{Type: "createTable", TableName: "users"},
+							{Type: "createIndex", IndexName: "idx_users"},
+							{Type: "addForeignKey"},
+						},
+					},
+				},
+			},
+			wantViolations: 1, // Only one violation per changeset
+			wantMessage:    "Changeset with risky operation 'createTable' requires preconditions (mode: risky-only)",
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			rule := NewNonIdempotentChangesRule(tt.config)
 			violations := rule.Check(tt.changelog)
 			if len(violations) != tt.wantViolations {
 				t.Errorf("Expected %d violations, got %d", tt.wantViolations, len(violations))
+			}
+			if tt.wantMessage != "" && len(violations) > 0 {
+				if violations[0].Message != tt.wantMessage {
+					t.Errorf("Expected message %q, got %q", tt.wantMessage, violations[0].Message)
+				}
 			}
 		})
 	}

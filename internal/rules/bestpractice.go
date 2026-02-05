@@ -54,7 +54,18 @@ func (r *MissingRollbackRule) Check(changelog *parser.Changelog) []Violation {
 }
 
 // NonIdempotentChangesRule detects changes that may fail on re-run.
-type NonIdempotentChangesRule struct{}
+type NonIdempotentChangesRule struct {
+	config config.RuleConfig
+}
+
+// NewNonIdempotentChangesRule creates a new NonIdempotentChangesRule with the given configuration.
+func NewNonIdempotentChangesRule(cfg config.RuleConfig) *NonIdempotentChangesRule {
+	// Default to risky-only mode if not specified
+	if cfg.Mode == "" {
+		cfg.Mode = config.ModeRiskyOnly
+	}
+	return &NonIdempotentChangesRule{config: cfg}
+}
 
 // ID returns the rule identifier.
 func (r *NonIdempotentChangesRule) ID() string {
@@ -76,10 +87,34 @@ func (r *NonIdempotentChangesRule) Severity() Severity {
 	return SeverityWarning
 }
 
-// Check analyzes the changelog for non-idempotent changes.
-func (r *NonIdempotentChangesRule) Check(changelog *parser.Changelog) []Violation {
-	violations := make([]Violation, 0)
+// shouldExcludeFile checks if a file should be excluded from the rule based on exclude patterns.
+func (r *NonIdempotentChangesRule) shouldExcludeFile(filePath string) bool {
+	normPath := filepath.ToSlash(filePath)
 
+	for _, pattern := range r.config.ExcludePatterns {
+		// Special case for **/init/** and **/seed/** patterns
+		if pattern == "**/init/**" {
+			if strings.Contains(normPath, "/init/") || strings.Contains(normPath, "\\init\\") {
+				return true
+			}
+		}
+		if pattern == "**/seed/**" {
+			if strings.Contains(normPath, "/seed/") || strings.Contains(normPath, "\\seed\\") {
+				return true
+			}
+		}
+
+		// Use MatchesResourceFilter for proper glob matching
+		matched, err := parser.MatchesResourceFilter(normPath, pattern)
+		if err == nil && matched {
+			return true
+		}
+	}
+	return false
+}
+
+// hasRiskyOperation checks if a changeset contains operations that typically need preconditions.
+func (r *NonIdempotentChangesRule) hasRiskyOperation(cs parser.ChangeSet) (bool, string) {
 	// Operations that typically need preconditions to be idempotent
 	riskyOperations := map[string]bool{
 		"createtable":         true,
@@ -91,27 +126,59 @@ func (r *NonIdempotentChangesRule) Check(changelog *parser.Changelog) []Violatio
 		"adduniqueconstraint": true,
 	}
 
+	for _, change := range cs.Changes {
+		changeType := strings.ToLower(strings.ReplaceAll(change.Type, " ", ""))
+		if riskyOperations[changeType] {
+			return true, change.Type
+		}
+	}
+	return false, ""
+}
+
+// Check analyzes the changelog for non-idempotent changes.
+func (r *NonIdempotentChangesRule) Check(changelog *parser.Changelog) []Violation {
+	violations := make([]Violation, 0)
+
 	for _, cs := range changelog.ChangeSets {
 		// Skip if runAlways is set (indicates intentional re-run)
 		if cs.RunAlways {
 			continue
 		}
 
+		// Skip if file matches exclude patterns
+		if r.shouldExcludeFile(cs.FilePath) {
+			continue
+		}
+
 		hasPreconditions := cs.HasPreconditions()
 
-		for _, change := range cs.Changes {
-			changeType := strings.ToLower(strings.ReplaceAll(change.Type, " ", ""))
-
-			if riskyOperations[changeType] && !hasPreconditions {
+		// Mode: all - require preconditions on ALL changesets
+		if r.config.Mode == config.ModeAll {
+			if !hasPreconditions {
 				violations = append(violations, Violation{
 					Rule:        r.ID(),
 					Severity:    r.Severity(),
-					Message:     "Change type '" + change.Type + "' may fail on re-run without preconditions",
+					Message:     "Changeset requires preconditions (mode: all)",
 					FilePath:    cs.FilePath,
 					ChangeSetID: cs.ID,
 					Author:      cs.Author,
 				})
-				break // Only report once per changeset
+			}
+			continue
+		}
+
+		// Mode: risky-only (default) - require preconditions only for risky operations
+		if r.config.Mode == config.ModeRiskyOnly {
+			hasRisky, changeType := r.hasRiskyOperation(cs)
+			if hasRisky && !hasPreconditions {
+				violations = append(violations, Violation{
+					Rule:        r.ID(),
+					Severity:    r.Severity(),
+					Message:     "Changeset with risky operation '" + changeType + "' requires preconditions (mode: risky-only)",
+					FilePath:    cs.FilePath,
+					ChangeSetID: cs.ID,
+					Author:      cs.Author,
+				})
 			}
 		}
 	}
@@ -646,6 +713,165 @@ func (r *DMLLocationRule) isInDataDir(filePath string, dataRe *regexp.Regexp) bo
 
 	for _, part := range parts {
 		if dataRe.MatchString(part) {
+			return true
+		}
+	}
+
+	return false
+}
+
+// LabelPatternRule enforces label naming conventions.
+type LabelPatternRule struct {
+	patterns        []*regexp.Regexp
+	requireLabel    bool
+	excludePatterns []string
+}
+
+// NewLabelPatternRule creates a new label pattern rule with configuration.
+func NewLabelPatternRule(cfg *config.LabelPatternConfig) *LabelPatternRule {
+	if cfg == nil {
+		cfg = &config.LabelPatternConfig{
+			Pattern:         `^v\d+$`,
+			RequireLabel:    true,
+			ExcludePatterns: []string{"**/init/**"},
+		}
+	}
+
+	// Compile patterns
+	var patterns []*regexp.Regexp
+
+	// Single pattern
+	if cfg.Pattern != "" {
+		if re, err := regexp.Compile(cfg.Pattern); err == nil {
+			patterns = append(patterns, re)
+		}
+	}
+
+	// Multiple patterns
+	for _, p := range cfg.Patterns {
+		if re, err := regexp.Compile(p); err == nil {
+			patterns = append(patterns, re)
+		}
+	}
+
+	return &LabelPatternRule{
+		patterns:        patterns,
+		requireLabel:    cfg.RequireLabel,
+		excludePatterns: cfg.ExcludePatterns,
+	}
+}
+
+// ID returns the rule identifier.
+func (r *LabelPatternRule) ID() string {
+	return "label-pattern"
+}
+
+// Name returns the rule name.
+func (r *LabelPatternRule) Name() string {
+	return "Label Pattern Enforcement"
+}
+
+// Description returns the rule description.
+func (r *LabelPatternRule) Description() string {
+	return "Ensures changeset labels follow configured naming patterns"
+}
+
+// Severity returns the rule severity.
+func (r *LabelPatternRule) Severity() Severity {
+	return SeverityWarning
+}
+
+// Check analyzes the changelog for label pattern violations.
+func (r *LabelPatternRule) Check(changelog *parser.Changelog) []Violation {
+	violations := make([]Violation, 0)
+
+	for _, cs := range changelog.ChangeSets {
+		// Check if file should be excluded
+		if r.shouldExclude(cs.FilePath) {
+			continue
+		}
+
+		// Check if labels are required but missing
+		if r.requireLabel && len(cs.Labels) == 0 {
+			violations = append(violations, Violation{
+				Rule:        r.ID(),
+				Severity:    r.Severity(),
+				Message:     "Changeset lacks required label",
+				FilePath:    cs.FilePath,
+				ChangeSetID: cs.ID,
+				Author:      cs.Author,
+			})
+			continue
+		}
+
+		// Check each label against patterns
+		for _, label := range cs.Labels {
+			label = strings.TrimSpace(label)
+
+			// Check for empty labels
+			if label == "" {
+				violations = append(violations, Violation{
+					Rule:        r.ID(),
+					Severity:    r.Severity(),
+					Message:     "Changeset has empty label",
+					FilePath:    cs.FilePath,
+					ChangeSetID: cs.ID,
+					Author:      cs.Author,
+				})
+				continue
+			}
+
+			// Check against patterns
+			if !r.matchesAnyPattern(label) {
+				violations = append(violations, Violation{
+					Rule:        r.ID(),
+					Severity:    r.Severity(),
+					Message:     "Label '" + label + "' does not match required pattern",
+					FilePath:    cs.FilePath,
+					ChangeSetID: cs.ID,
+					Author:      cs.Author,
+				})
+			}
+		}
+	}
+
+	return violations
+}
+
+// matchesAnyPattern checks if a label matches any configured pattern.
+func (r *LabelPatternRule) matchesAnyPattern(label string) bool {
+	// If no patterns configured, accept any label
+	if len(r.patterns) == 0 {
+		return true
+	}
+
+	for _, pattern := range r.patterns {
+		if pattern.MatchString(label) {
+			return true
+		}
+	}
+	return false
+}
+
+// shouldExclude checks if a file path should be excluded from this rule.
+func (r *LabelPatternRule) shouldExclude(filePath string) bool {
+	if len(r.excludePatterns) == 0 {
+		return false
+	}
+
+	normPath := filepath.ToSlash(filePath)
+
+	for _, pattern := range r.excludePatterns {
+		// Special case for **/init/** pattern
+		if pattern == "**/init/**" {
+			if strings.Contains(normPath, "/init/") || strings.Contains(normPath, "\\init\\") {
+				return true
+			}
+		}
+
+		// Use MatchesResourceFilter for proper glob matching
+		matched, err := parser.MatchesResourceFilter(normPath, pattern)
+		if err == nil && matched {
 			return true
 		}
 	}
