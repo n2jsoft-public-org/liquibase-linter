@@ -1,0 +1,261 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- Good Practice: Create products table with proper structure -->
+    <changeSet id="1-create-products-table" author="alice">
+        <comment>Create products table for e-commerce</comment>
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="products"/>
+            </not>
+        </preConditions>
+        <createTable tableName="products">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="sku" type="VARCHAR(50)">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="name" type="VARCHAR(200)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="description" type="TEXT"/>
+            <column name="price" type="DECIMAL(10,2)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="stock_quantity" type="INT" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="category_id" type="BIGINT"/>
+            <column name="is_active" type="BOOLEAN" defaultValueBoolean="true">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP"/>
+        </createTable>
+        <rollback>
+            <dropTable tableName="products"/>
+        </rollback>
+    </changeSet>
+
+    <!-- Good Practice: Create categories table -->
+    <changeSet id="2-create-categories-table" author="alice">
+        <comment>Create categories table for product organization</comment>
+        <createTable tableName="categories">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="name" type="VARCHAR(100)">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="parent_id" type="BIGINT"/>
+            <column name="slug" type="VARCHAR(100)">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="description" type="TEXT"/>
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP"/>
+        </createTable>
+        <rollback>
+            <dropTable tableName="categories"/>
+        </rollback>
+    </changeSet>
+
+    <!-- Good Practice: Add foreign key with proper indexing -->
+    <changeSet id="3-add-product-category-fk" author="alice">
+        <comment>Add foreign key relationship between products and categories</comment>
+        <addForeignKeyConstraint
+            constraintName="fk_products_category"
+            baseTableName="products"
+            baseColumnNames="category_id"
+            referencedTableName="categories"
+            referencedColumnNames="id"
+            onDelete="SET NULL"/>
+        <createIndex indexName="idx_products_category_id" tableName="products">
+            <column name="category_id"/>
+        </createIndex>
+        <rollback>
+            <dropIndex indexName="idx_products_category_id" tableName="products"/>
+            <dropForeignKeyConstraint baseTableName="products" constraintName="fk_products_category"/>
+        </rollback>
+    </changeSet>
+
+    <!-- Good Practice: Add indexes for commonly queried columns -->
+    <changeSet id="4-add-products-indexes" author="bob">
+        <comment>Add indexes to improve query performance</comment>
+        <createIndex indexName="idx_products_sku" tableName="products">
+            <column name="sku"/>
+        </createIndex>
+        <createIndex indexName="idx_products_is_active" tableName="products">
+            <column name="is_active"/>
+        </createIndex>
+        <createIndex indexName="idx_products_created_at" tableName="products">
+            <column name="created_at"/>
+        </createIndex>
+        <rollback>
+            <dropIndex indexName="idx_products_created_at" tableName="products"/>
+            <dropIndex indexName="idx_products_is_active" tableName="products"/>
+            <dropIndex indexName="idx_products_sku" tableName="products"/>
+        </rollback>
+    </changeSet>
+
+    <!-- Good Practice: Create orders table with proper relationships -->
+    <changeSet id="5-create-orders-table" author="bob">
+        <comment>Create orders table for purchase tracking</comment>
+        <createTable tableName="orders">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="order_number" type="VARCHAR(50)">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="user_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="total_amount" type="DECIMAL(10,2)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="shipping_address" type="TEXT"/>
+            <column name="billing_address" type="TEXT"/>
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP"/>
+            <column name="updated_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP"/>
+        </createTable>
+        <createIndex indexName="idx_orders_user_id" tableName="orders">
+            <column name="user_id"/>
+        </createIndex>
+        <createIndex indexName="idx_orders_status" tableName="orders">
+            <column name="status"/>
+        </createIndex>
+        <createIndex indexName="idx_orders_created_at" tableName="orders">
+            <column name="created_at"/>
+        </createIndex>
+        <rollback>
+            <dropTable tableName="orders"/>
+        </rollback>
+    </changeSet>
+
+    <!-- Good Practice: Create order items junction table -->
+    <changeSet id="6-create-order-items-table" author="bob">
+        <comment>Create order items for order line items</comment>
+        <createTable tableName="order_items">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="order_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="product_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="quantity" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="unit_price" type="DECIMAL(10,2)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="subtotal" type="DECIMAL(10,2)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <addForeignKeyConstraint
+            constraintName="fk_order_items_order"
+            baseTableName="order_items"
+            baseColumnNames="order_id"
+            referencedTableName="orders"
+            referencedColumnNames="id"
+            onDelete="CASCADE"/>
+        <addForeignKeyConstraint
+            constraintName="fk_order_items_product"
+            baseTableName="order_items"
+            baseColumnNames="product_id"
+            referencedTableName="products"
+            referencedColumnNames="id"
+            onDelete="RESTRICT"/>
+        <createIndex indexName="idx_order_items_order_id" tableName="order_items">
+            <column name="order_id"/>
+        </createIndex>
+        <createIndex indexName="idx_order_items_product_id" tableName="order_items">
+            <column name="product_id"/>
+        </createIndex>
+        <rollback>
+            <dropTable tableName="order_items"/>
+        </rollback>
+    </changeSet>
+
+    <!-- Good Practice: Add column with precondition check -->
+    <changeSet id="7-add-product-weight-column" author="charlie">
+        <comment>Add weight column to products for shipping calculations</comment>
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="products" columnName="weight_kg"/>
+            </not>
+        </preConditions>
+        <addColumn tableName="products">
+            <column name="weight_kg" type="DECIMAL(8,3)" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+        <rollback>
+            <dropColumn tableName="products" columnName="weight_kg"/>
+        </rollback>
+    </changeSet>
+
+    <!-- Good Practice: Update data with proper conditions -->
+    <changeSet id="8-update-legacy-product-status" author="charlie">
+        <comment>Set legacy products to inactive</comment>
+        <preConditions onFail="WARN">
+            <tableExists tableName="products"/>
+            <columnExists tableName="products" columnName="is_active"/>
+        </preConditions>
+        <update tableName="products">
+            <column name="is_active" valueBoolean="false"/>
+            <where>created_at &lt; DATE_SUB(NOW(), INTERVAL 2 YEAR) AND stock_quantity = 0</where>
+        </update>
+        <rollback>
+            <!-- No rollback needed as this is a data cleanup operation -->
+            <comment>No rollback - data cleanup operation</comment>
+        </rollback>
+    </changeSet>
+
+    <!-- Good Practice: Create view with rollback -->
+    <changeSet id="9-create-active-products-view" author="diana">
+        <comment>Create view for active products with category information</comment>
+        <createView viewName="v_active_products" replaceIfExists="true">
+            SELECT 
+                p.id,
+                p.sku,
+                p.name,
+                p.description,
+                p.price,
+                p.stock_quantity,
+                c.name AS category_name,
+                c.slug AS category_slug
+            FROM products p
+            LEFT JOIN categories c ON p.category_id = c.id
+            WHERE p.is_active = TRUE
+        </createView>
+        <rollback>
+            <dropView viewName="v_active_products"/>
+        </rollback>
+    </changeSet>
+
+    <!-- Good Practice: Add constraint with validation -->
+    <changeSet id="10-add-price-check-constraint" author="diana">
+        <comment>Ensure product prices are positive</comment>
+        <sql>
+            ALTER TABLE products ADD CONSTRAINT chk_products_price_positive CHECK (price > 0);
+        </sql>
+        <rollback>
+            <sql>ALTER TABLE products DROP CONSTRAINT chk_products_price_positive;</sql>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

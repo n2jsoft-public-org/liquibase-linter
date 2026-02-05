@@ -2,8 +2,6 @@
 
 This document describes all available linting rules in the Liquibase Linter.
 
-> **Note**: Rules will be fully implemented in Phase 3. This document describes the planned rules.
-
 ## Rule Categories
 
 - **Security**: Detect security vulnerabilities and risks
@@ -17,7 +15,7 @@ This document describes all available linting rules in the Liquibase Linter.
 
 **Severity**: Critical  
 **Category**: Security  
-**Status**: Planned (Phase 3)
+**Status**: ✅ Implemented
 
 Detects potential SQL injection vulnerabilities in Liquibase changesets.
 
@@ -48,7 +46,7 @@ Detects potential SQL injection vulnerabilities in Liquibase changesets.
 
 **Severity**: Critical  
 **Category**: Security  
-**Status**: Planned (Phase 3)
+**Status**: ✅ Implemented
 
 Finds hardcoded passwords, API keys, and other sensitive credentials.
 
@@ -70,7 +68,7 @@ Finds hardcoded passwords, API keys, and other sensitive credentials.
 
 **Severity**: Critical  
 **Category**: Security  
-**Status**: Planned (Phase 3)
+**Status**: ✅ Implemented
 
 Detects dangerous database operations that could cause data loss.
 
@@ -101,7 +99,7 @@ Detects dangerous database operations that could cause data loss.
 
 **Severity**: Critical  
 **Category**: Security  
-**Status**: Planned (Phase 3)
+**Status**: ✅ Implemented
 
 Detects excessive privilege grants that could lead to security issues.
 
@@ -116,7 +114,7 @@ Detects excessive privilege grants that could lead to security issues.
 
 **Severity**: Warning  
 **Category**: Reliability  
-**Status**: Planned (Phase 3)
+**Status**: ✅ Implemented
 
 Ensures changesets have proper rollback scripts.
 
@@ -150,7 +148,7 @@ Ensures changesets have proper rollback scripts.
 
 **Severity**: Warning  
 **Category**: Reliability  
-**Status**: Planned (Phase 3)
+**Status**: ✅ Implemented
 
 Detects operations that are not idempotent and may fail on re-run.
 
@@ -163,7 +161,7 @@ Detects operations that are not idempotent and may fail on re-run.
 
 **Severity**: Warning  
 **Category**: Reliability  
-**Status**: Planned (Phase 3)
+**Status**: ✅ Implemented
 
 Ensures risky operations have appropriate preconditions.
 
@@ -178,7 +176,7 @@ Ensures risky operations have appropriate preconditions.
 
 **Severity**: Info  
 **Category**: Performance  
-**Status**: Planned (Phase 3)
+**Status**: ✅ Implemented
 
 Detects tables without proper indexes on foreign keys.
 
@@ -191,7 +189,7 @@ Detects tables without proper indexes on foreign keys.
 
 **Severity**: Warning  
 **Category**: Performance  
-**Status**: Planned (Phase 3)
+**Status**: ✅ Implemented
 
 Identifies operations that may cause prolonged table locks.
 
@@ -204,7 +202,7 @@ Identifies operations that may cause prolonged table locks.
 
 **Severity**: Warning  
 **Category**: Performance  
-**Status**: Planned (Phase 3)
+**Status**: ✅ Implemented
 
 Detects operations that manipulate large amounts of data.
 
@@ -219,7 +217,7 @@ Detects operations that manipulate large amounts of data.
 
 **Severity**: Info  
 **Category**: Best Practices  
-**Status**: Planned (Phase 3)
+**Status**: ✅ Implemented
 
 Enforces consistent naming conventions for database objects.
 
@@ -233,7 +231,7 @@ Enforces consistent naming conventions for database objects.
 
 **Severity**: Info  
 **Category**: Best Practices  
-**Status**: Planned (Phase 3)
+**Status**: ✅ Implemented
 
 Ensures proper organization of changelog files.
 
@@ -247,7 +245,7 @@ Ensures proper organization of changelog files.
 
 **Severity**: Info  
 **Category**: Best Practices  
-**Status**: Planned (Phase 3)
+**Status**: ✅ Implemented
 
 Ensures changesets are properly documented.
 
