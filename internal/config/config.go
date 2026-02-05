@@ -12,14 +12,14 @@ import (
 
 // Config represents the complete configuration for the linter.
 type Config struct {
-	Rules                map[string]RuleConfig       `yaml:"rules"`
-	Ignore               []string                    `yaml:"ignore"`
-	Output               OutputConfig                `yaml:"output"`
-	Parser               ParserConfig                `yaml:"parser"`
-	FileStructure        FileStructureConfig         `yaml:"file_structure"`
-	LabelPattern         LabelPatternConfig          `yaml:"label_pattern"`
-	NoManualTransactions NoManualTransactionsConfig  `yaml:"no_manual_transactions"`
-	SeverityThreshold    string                      `yaml:"severity_threshold"`
+	Rules                map[string]RuleConfig      `yaml:"rules"`
+	Ignore               []string                   `yaml:"ignore"`
+	Output               OutputConfig               `yaml:"output"`
+	Parser               ParserConfig               `yaml:"parser"`
+	FileStructure        FileStructureConfig        `yaml:"file_structure"`
+	LabelPattern         LabelPatternConfig         `yaml:"label_pattern"`
+	NoManualTransactions NoManualTransactionsConfig `yaml:"no_manual_transactions"`
+	SeverityThreshold    string                     `yaml:"severity_threshold"`
 }
 
 // RuleConfig represents configuration for a single rule.
@@ -135,6 +135,10 @@ func Default() *Config {
 			"no-manual-transactions": {
 				Enabled:  true,
 				Severity: "warning",
+			},
+			"redundant-onerror-halt": {
+				Enabled:  true,
+				Severity: "info",
 			},
 		},
 		Ignore: []string{},

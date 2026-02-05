@@ -32,7 +32,7 @@ Detects manual transaction control statements (BEGIN, COMMIT, ROLLBACK) that int
 
 ### 4. Redundant onError:HALT
 **File**: [redundant-onerror-halt.md](redundant-onerror-halt.md)  
-**Status**: 📋 Planned  
+**Status**: ✅ Implemented  
 **Priority**: Low  
 **Effort**: 1-2 hours
 

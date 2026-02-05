@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+    http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.8.xsd">
+
+    <!-- Invalid: Redundant onError="HALT" -->
+    <changeSet id="1" author="test">
+        <preConditions onFail="MARK_RAN" onError="HALT">
+            <tableExists tableName="users"/>
+        </preConditions>
+        <addColumn tableName="users">
+            <column name="email" type="VARCHAR(255)"/>
+        </addColumn>
+    </changeSet>
+
+    <!-- Valid: No onError attribute (uses default) -->
+    <changeSet id="2" author="test">
+        <preConditions onFail="MARK_RAN">
+            <tableExists tableName="users"/>
+        </preConditions>
+        <addColumn tableName="users">
+            <column name="phone" type="VARCHAR(20)"/>
+        </addColumn>
+    </changeSet>
+
+    <!-- Valid: Non-default onError value -->
+    <changeSet id="3" author="test">
+        <preConditions onFail="MARK_RAN" onError="WARN">
+            <tableExists tableName="users"/>
+        </preConditions>
+        <addColumn tableName="users">
+            <column name="status" type="VARCHAR(50)"/>
+        </addColumn>
+    </changeSet>
+
+    <!-- Invalid: Redundant onError="halt" (lowercase) -->
+    <changeSet id="4" author="test">
+        <preConditions onFail="MARK_RAN" onError="halt">
+            <tableExists tableName="products"/>
+        </preConditions>
+        <addColumn tableName="products">
+            <column name="price" type="DECIMAL(10,2)"/>
+        </addColumn>
+    </changeSet>
+
+</databaseChangeLog>
