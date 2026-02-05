@@ -19,6 +19,7 @@ Database migrations are critical infrastructure code that often contains securit
 - 🚀 **Fast**: Built in Go for optimal performance (<100ms startup for typical changelogs)
 - 📊 **Multiple Output Formats**: Support for text, JSON, SARIF, and JUnit formats
 - 🔧 **Configurable**: Flexible rule configuration via YAML
+- 🎯 **Inline Suppressions**: Disable specific rules for individual changesets via comments
 - 🔌 **CI/CD Ready**: Easy integration with GitHub Actions, GitLab CI, Jenkins, and more
 
 ## Installation
@@ -53,6 +54,22 @@ liquibase-linter rules --info=sql-injection
 # Initialize a configuration file
 liquibase-linter init
 ```
+
+### Suppressing Rules for Specific Changesets
+
+Sometimes you need to intentionally bypass a rule for a specific changeset. Add an inline suppression to the changeset comment:
+
+```xml
+<changeSet id="1" author="john">
+    <comment>liquibase-linter:disable sql-injection</comment>
+    <sql>
+        -- Known safe parameter from validated config
+        INSERT INTO settings VALUES (${config_value});
+    </sql>
+</changeSet>
+```
+
+See [Suppression Documentation](docs/suppression.md) for complete details and format-specific examples.
 
 ## Example Output
 
@@ -167,6 +184,7 @@ See the [docs](docs/) directory for detailed documentation:
 - **[Usage Guide](docs/usage.md)**: Comprehensive guide to using the linter
 - **[Rules Reference](docs/rules.md)**: Complete list of available rules with examples
 - **[Configuration Guide](docs/configuration.md)**: Detailed configuration options
+- **[Suppression Guide](docs/suppression.md)**: How to suppress rules for specific changesets
 - **[CI/CD Integration](docs/cicd.md)**: Integration examples for various CI/CD platforms
 - **[Development Guide](docs/development.md)**: Guide for contributors and developers
 

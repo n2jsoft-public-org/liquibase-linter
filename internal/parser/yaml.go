@@ -202,6 +202,8 @@ func (p *YAMLParser) parseChangeSet(data any, filePath string) (ChangeSet, error
 	}
 	if comment, ok := csMap["comment"].(string); ok {
 		cs.Comment = comment
+		// Parse suppression directives from comment
+		cs.SuppressedRules = ParseSuppressions(cs.Comment)
 	}
 	if logicalFilePath, ok := csMap["logicalFilePath"].(string); ok {
 		cs.LogicalFilePath = logicalFilePath

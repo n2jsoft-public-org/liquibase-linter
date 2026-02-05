@@ -880,3 +880,198 @@ func TestDMLLocationRule_Check(t *testing.T) {
 		})
 	}
 }
+
+func TestUniqueChangesetRule_Check(t *testing.T) {
+	rule := &UniqueChangesetRule{}
+
+	tests := []struct {
+		changelog      *parser.Changelog
+		name           string
+		wantMessage    string
+		wantViolations int
+	}{
+		{
+			name: "no duplicates",
+			changelog: &parser.Changelog{
+				FilePath: "test.xml",
+				ChangeSets: []parser.ChangeSet{
+					{
+						ID:       "1",
+						Author:   "john",
+						FilePath: "test.xml",
+					},
+					{
+						ID:       "2",
+						Author:   "john",
+						FilePath: "test.xml",
+					},
+					{
+						ID:       "3",
+						Author:   "jane",
+						FilePath: "test.xml",
+					},
+				},
+			},
+			wantViolations: 0,
+		},
+		{
+			name: "duplicate in same file",
+			changelog: &parser.Changelog{
+				FilePath: "test.xml",
+				ChangeSets: []parser.ChangeSet{
+					{
+						ID:       "1",
+						Author:   "john",
+						FilePath: "test.xml",
+					},
+					{
+						ID:       "2",
+						Author:   "john",
+						FilePath: "test.xml",
+					},
+					{
+						ID:       "1",
+						Author:   "john",
+						FilePath: "test.xml",
+					},
+				},
+			},
+			wantViolations: 1,
+			wantMessage:    "Duplicate changeset found: id='1' author='john' in file 'test.xml'",
+		},
+		{
+			name: "same id+author in different files - no violation",
+			changelog: &parser.Changelog{
+				FilePath: "test.xml",
+				ChangeSets: []parser.ChangeSet{
+					{
+						ID:       "1",
+						Author:   "john",
+						FilePath: "changelog/v1.xml",
+					},
+					{
+						ID:       "1",
+						Author:   "john",
+						FilePath: "changelog/v2.xml",
+					},
+				},
+			},
+			wantViolations: 0,
+		},
+		{
+			name: "same id, different authors in same file - no violation",
+			changelog: &parser.Changelog{
+				FilePath: "test.xml",
+				ChangeSets: []parser.ChangeSet{
+					{
+						ID:       "1",
+						Author:   "john",
+						FilePath: "test.xml",
+					},
+					{
+						ID:       "1",
+						Author:   "jane",
+						FilePath: "test.xml",
+					},
+				},
+			},
+			wantViolations: 0,
+		},
+		{
+			name: "multiple duplicates",
+			changelog: &parser.Changelog{
+				FilePath: "test.xml",
+				ChangeSets: []parser.ChangeSet{
+					{
+						ID:       "1",
+						Author:   "john",
+						FilePath: "test.xml",
+					},
+					{
+						ID:       "1",
+						Author:   "john",
+						FilePath: "test.xml",
+					},
+					{
+						ID:       "2",
+						Author:   "jane",
+						FilePath: "test.xml",
+					},
+					{
+						ID:       "2",
+						Author:   "jane",
+						FilePath: "test.xml",
+					},
+				},
+			},
+			wantViolations: 2,
+		},
+		{
+			name: "empty changelog",
+			changelog: &parser.Changelog{
+				FilePath:   "test.xml",
+				ChangeSets: []parser.ChangeSet{},
+			},
+			wantViolations: 0,
+		},
+		{
+			name: "triple occurrence of same changeset",
+			changelog: &parser.Changelog{
+				FilePath: "test.xml",
+				ChangeSets: []parser.ChangeSet{
+					{
+						ID:       "1",
+						Author:   "john",
+						FilePath: "test.xml",
+					},
+					{
+						ID:       "1",
+						Author:   "john",
+						FilePath: "test.xml",
+					},
+					{
+						ID:       "1",
+						Author:   "john",
+						FilePath: "test.xml",
+					},
+				},
+			},
+			wantViolations: 2, // Second and third occurrences are violations
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			violations := rule.Check(tt.changelog)
+			if len(violations) != tt.wantViolations {
+				t.Errorf("Expected %d violations, got %d", tt.wantViolations, len(violations))
+				for _, v := range violations {
+					t.Logf("Violation: %s", v.Message)
+				}
+			}
+			if tt.wantMessage != "" && len(violations) > 0 {
+				if !contains(violations[0].Message, tt.wantMessage) {
+					t.Errorf("Expected message to contain '%s', got '%s'", tt.wantMessage, violations[0].Message)
+				}
+			}
+			// Verify severity is Critical
+			if len(violations) > 0 && violations[0].Severity != SeverityCritical {
+				t.Errorf("Expected critical severity, got %v", violations[0].Severity)
+			}
+		})
+	}
+}
+
+// Helper function to check if a string contains a substring
+func contains(str, substr string) bool {
+	return len(str) >= len(substr) && (str == substr || substr == "" || (str != "" && substr != "" && containsCheck(str, substr)))
+}
+
+func containsCheck(str, substr string) bool {
+	for i := 0; i <= len(str)-len(substr); i++ {
+		if str[i:i+len(substr)] == substr {
+			return true
+		}
+	}
+	return false
+}

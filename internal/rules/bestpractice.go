@@ -1236,3 +1236,59 @@ func (r *AtomicChangesetRule) getChangeTypes(cs *parser.ChangeSet) []string {
 
 	return types
 }
+
+// UniqueChangesetRule detects duplicate changesets within the same file or across included files.
+type UniqueChangesetRule struct{}
+
+// ID returns the rule identifier.
+func (r *UniqueChangesetRule) ID() string {
+	return "unique-changeset"
+}
+
+// Name returns the rule name.
+func (r *UniqueChangesetRule) Name() string {
+	return "Unique Changeset Detection"
+}
+
+// Description returns the rule description.
+func (r *UniqueChangesetRule) Description() string {
+	return "Detects duplicate changesets that would cause Liquibase execution failures. A changeset is uniquely identified by ID + Author + FilePath."
+}
+
+// Severity returns the rule severity.
+func (r *UniqueChangesetRule) Severity() Severity {
+	return SeverityCritical
+}
+
+// Check analyzes the changelog for duplicate changesets.
+func (r *UniqueChangesetRule) Check(changelog *parser.Changelog) []Violation {
+	violations := make([]Violation, 0)
+
+	// Map to track seen changesets: key is "id:author:filepath"
+	seen := make(map[string]bool)
+
+	for i := range changelog.ChangeSets {
+		cs := &changelog.ChangeSets[i]
+
+		// Build composite key using ID, Author, and FilePath
+		// This follows Liquibase's uniqueness constraint
+		key := fmt.Sprintf("%s:%s:%s", cs.ID, cs.Author, cs.FilePath)
+
+		if seen[key] {
+			// Duplicate found
+			violations = append(violations, Violation{
+				Rule:        r.ID(),
+				Severity:    r.Severity(),
+				Message:     fmt.Sprintf("Duplicate changeset found: id='%s' author='%s' in file '%s'. First occurrence at same location.", cs.ID, cs.Author, cs.FilePath),
+				FilePath:    cs.FilePath,
+				ChangeSetID: cs.ID,
+				Author:      cs.Author,
+			})
+		} else {
+			// First occurrence, track it
+			seen[key] = true
+		}
+	}
+
+	return violations
+}

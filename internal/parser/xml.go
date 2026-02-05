@@ -286,6 +286,9 @@ func (p *XMLParser) convertChangeSet(xmlCS *xmlChangeSet, filePath string) Chang
 		Preconditions:   nil,
 	}
 
+	// Parse suppression directives from comment
+	cs.SuppressedRules = ParseSuppressions(cs.Comment)
+
 	// Parse labels
 	if xmlCS.Labels != "" {
 		cs.Labels = strings.Split(xmlCS.Labels, ",")

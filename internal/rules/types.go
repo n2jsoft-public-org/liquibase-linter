@@ -37,6 +37,20 @@ func (s Severity) String() string {
 	}
 }
 
+// ParseSeverity converts a severity string to a Severity constant.
+func ParseSeverity(s string) (Severity, error) {
+	switch strings.ToLower(s) {
+	case "info", "informational":
+		return SeverityInfo, nil
+	case "warning", "warn":
+		return SeverityWarning, nil
+	case "critical", "error":
+		return SeverityCritical, nil
+	default:
+		return SeverityWarning, fmt.Errorf("invalid severity: %s", s)
+	}
+}
+
 // Violation represents a single rule violation found in a changelog.
 type Violation struct {
 	Rule        string
@@ -60,15 +74,17 @@ type Rule interface {
 
 // RuleRegistry manages all available rules.
 type RuleRegistry struct {
-	rules   map[string]Rule
-	enabled map[string]bool
+	rules            map[string]Rule
+	enabled          map[string]bool
+	severityOverride map[string]Severity
 }
 
 // NewRuleRegistry creates a new rule registry.
 func NewRuleRegistry() *RuleRegistry {
 	return &RuleRegistry{
-		rules:   make(map[string]Rule),
-		enabled: make(map[string]bool),
+		rules:            make(map[string]Rule),
+		enabled:          make(map[string]bool),
+		severityOverride: make(map[string]Severity),
 	}
 }
 
@@ -95,6 +111,24 @@ func (r *RuleRegistry) Disable(ruleID string) {
 // IsEnabled checks if a rule is enabled.
 func (r *RuleRegistry) IsEnabled(ruleID string) bool {
 	return r.enabled[ruleID]
+}
+
+// SetSeverity sets a severity override for a specific rule.
+func (r *RuleRegistry) SetSeverity(ruleID string, severity Severity) {
+	if _, exists := r.rules[ruleID]; exists {
+		r.severityOverride[ruleID] = severity
+	}
+}
+
+// GetSeverity returns the effective severity for a rule (with override if present).
+func (r *RuleRegistry) GetSeverity(ruleID string) Severity {
+	if severity, hasOverride := r.severityOverride[ruleID]; hasOverride {
+		return severity
+	}
+	if rule, exists := r.rules[ruleID]; exists {
+		return rule.Severity()
+	}
+	return SeverityWarning // Default fallback
 }
 
 // GetRule returns a rule by ID.
@@ -129,6 +163,15 @@ func (r *RuleRegistry) CheckChangelog(changelog *parser.Changelog) []Violation {
 
 	for _, rule := range r.GetEnabledRules() {
 		ruleViolations := rule.Check(changelog)
+		
+		// Apply severity overrides if present
+		ruleID := rule.ID()
+		if severity, hasOverride := r.severityOverride[ruleID]; hasOverride {
+			for i := range ruleViolations {
+				ruleViolations[i].Severity = severity
+			}
+		}
+		
 		violations = append(violations, ruleViolations...)
 	}
 
@@ -164,4 +207,69 @@ func ReadLineFromFile(filePath string, lineNumber int) string {
 	}
 
 	return ""
+}
+
+// FilterSuppressedViolations filters out violations for changesets that have suppressed
+// the violated rule via inline comments (e.g., liquibase-linter:disable rule-id).
+func FilterSuppressedViolations(violations []Violation, changelog *parser.Changelog) []Violation {
+	if len(violations) == 0 {
+		return violations
+	}
+
+	// Build a map of changeset ID -> changeset for quick lookup
+	// Use FilePath+ID+Author as composite key to handle duplicate IDs across files
+	changesetMap := make(map[string]*parser.ChangeSet)
+	for i := range changelog.ChangeSets {
+		cs := &changelog.ChangeSets[i]
+		key := cs.FilePath + ":" + cs.ID + ":" + cs.Author
+		changesetMap[key] = cs
+	}
+
+	// Filter violations
+	filtered := make([]Violation, 0, len(violations))
+	for _, violation := range violations {
+		key := violation.FilePath + ":" + violation.ChangeSetID + ":" + violation.Author
+		if cs, exists := changesetMap[key]; exists {
+			// Check if this rule is suppressed for this changeset
+			if cs.IsSuppressed(violation.Rule) {
+				continue // Skip this violation
+			}
+		}
+		filtered = append(filtered, violation)
+	}
+
+	return filtered
+}
+
+// SuppressionWarning represents a warning about an invalid suppression directive.
+type SuppressionWarning struct {
+	ChangeSetID string
+	Author      string
+	FilePath    string
+	RuleID      string // Invalid rule ID
+	Message     string
+}
+
+// ValidateSuppressions checks all suppression directives in a changelog and returns
+// warnings for any invalid rule IDs.
+func ValidateSuppressions(changelog *parser.Changelog, registry *RuleRegistry) []SuppressionWarning {
+	warnings := make([]SuppressionWarning, 0)
+
+	for i := range changelog.ChangeSets {
+		cs := &changelog.ChangeSets[i]
+		for _, suppressedRule := range cs.SuppressedRules {
+			// Check if the rule exists in the registry
+			if _, exists := registry.GetRule(suppressedRule); !exists {
+				warnings = append(warnings, SuppressionWarning{
+					ChangeSetID: cs.ID,
+					Author:      cs.Author,
+					FilePath:    cs.FilePath,
+					RuleID:      suppressedRule,
+					Message:     fmt.Sprintf("Unknown rule '%s' in suppression directive", suppressedRule),
+				})
+			}
+		}
+	}
+
+	return warnings
 }

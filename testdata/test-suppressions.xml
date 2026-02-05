@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.0.xsd">
+
+    <!-- This changeset has SQL injection vulnerability but it's suppressed -->
+    <changeSet id="1" author="john">
+        <comment>liquibase-linter:disable sql-injection</comment>
+        <sql>
+            CREATE TABLE users (
+                id INT PRIMARY KEY,
+                name VARCHAR(100)
+            );
+            INSERT INTO users VALUES (1, ${username});
+        </sql>
+    </changeSet>
+
+    <!-- This changeset suppresses multiple rules -->
+    <changeSet id="2" author="jane">
+        <comment>liquibase-linter:disable sql-injection,missing-rollback</comment>
+        <sql>
+            UPDATE users SET name = ${newname} WHERE id = ${userid};
+        </sql>
+    </changeSet>
+
+    <!-- This changeset has violations that are NOT suppressed -->
+    <changeSet id="3" author="bob">
+        <comment>Regular comment without suppression</comment>
+        <sql>
+            DELETE FROM users WHERE name = ${oldname};
+        </sql>
+    </changeSet>
+
+    <!-- This changeset has a suppression with case variations -->
+    <changeSet id="4" author="alice">
+        <comment>LIQUIBASE-LINTER:DISABLE SQL-INJECTION</comment>
+        <sql>
+            SELECT * FROM users WHERE id = ${id};
+        </sql>
+    </changeSet>
+
+    <!-- This changeset has suppression with extra text -->
+    <changeSet id="5" author="charlie">
+        <comment>Creating admin user. liquibase-linter:disable hardcoded-credentials because this is a test account</comment>
+        <sql>
+            CREATE USER 'admin'@'localhost' IDENTIFIED BY 'password123';
+        </sql>
+    </changeSet>
+
+    <!-- This changeset has an invalid rule ID in suppression -->
+    <changeSet id="6" author="dave">
+        <comment>liquibase-linter:disable invalid-rule-name</comment>
+        <sql>
+            CREATE TABLE dummy (id INT);
+        </sql>
+    </changeSet>
+
+</databaseChangeLog>
