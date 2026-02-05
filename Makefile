@@ -14,6 +14,10 @@ build:
 test:
 	go test -v -race -coverprofile=coverage.txt -covermode=atomic ./...
 
+# Run linter
+lint:
+	golangci-lint run ./...
+
 # Clean up build artifacts
 clean:
 	go clean
@@ -26,4 +30,4 @@ coverage:
 view-coverage:
 	go tool cover -html=coverage.txt
 
-.PHONY: build test clean coverage view-coverage
+.PHONY: build test lint clean coverage view-coverage
