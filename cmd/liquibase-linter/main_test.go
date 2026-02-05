@@ -15,6 +15,7 @@ func TestDiscoverConfigFile(t *testing.T) {
 
 	// Create nested directories
 	targetDir := filepath.Join(tmpDir, "db", "changelog")
+	//nolint:gosec // G301: Test directory, permissions are acceptable
 	err := os.MkdirAll(targetDir, 0755)
 	if err != nil {
 		t.Fatalf("Failed to create test directories: %v", err)
@@ -22,6 +23,7 @@ func TestDiscoverConfigFile(t *testing.T) {
 
 	// Create a config file in the changelog directory
 	configPath := filepath.Join(targetDir, ".liquibase-linter.yaml")
+	//nolint:gosec // G306: Test configuration file, permissions are acceptable
 	err = os.WriteFile(configPath, []byte("ignore:\n  - \"test/**\"\n"), 0644)
 	if err != nil {
 		t.Fatalf("Failed to create config file: %v", err)
@@ -100,10 +102,12 @@ func TestDiscoverFiles_WithIgnorePattern(t *testing.T) {
 	// Create directories
 	initDir := filepath.Join(tmpDir, "init")
 	sprintsDir := filepath.Join(tmpDir, "sprints")
+	//nolint:gosec // G301: Test directory, permissions are acceptable
 	err := os.MkdirAll(initDir, 0755)
 	if err != nil {
 		t.Fatalf("Failed to create init dir: %v", err)
 	}
+	//nolint:gosec // G301: Test directory, permissions are acceptable
 	err = os.MkdirAll(sprintsDir, 0755)
 	if err != nil {
 		t.Fatalf("Failed to create sprints dir: %v", err)
@@ -122,10 +126,12 @@ CREATE TABLE test1 (id INT);
 CREATE TABLE test2 (id INT);
 `
 
+	//nolint:gosec // G306: Test file, permissions are acceptable
 	err = os.WriteFile(initFile, []byte(initContent), 0644)
 	if err != nil {
 		t.Fatalf("Failed to create init file: %v", err)
 	}
+	//nolint:gosec // G306: Test file, permissions are acceptable
 	err = os.WriteFile(sprintsFile, []byte(sprintsContent), 0644)
 	if err != nil {
 		t.Fatalf("Failed to create sprints file: %v", err)

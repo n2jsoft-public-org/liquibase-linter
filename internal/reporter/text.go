@@ -17,8 +17,8 @@ type TextReporter struct {
 // Report implements the Reporter interface for text output
 func (r *TextReporter) Report(w io.Writer, result *Result) error {
 	if len(result.Violations) == 0 {
-		fmt.Fprintf(w, "%sNo issues found!%s\n", r.color(colorGreen), r.colorReset())
-		fmt.Fprintf(w, "Checked %d file(s) in %v\n", result.FilesChecked, result.TotalTime)
+		_, _ = fmt.Fprintf(w, "%sNo issues found!%s\n", r.color(colorGreen), r.colorReset())
+		_, _ = fmt.Fprintf(w, "Checked %d file(s) in %v\n", result.FilesChecked, result.TotalTime)
 		return nil
 	}
 
@@ -27,14 +27,14 @@ func (r *TextReporter) Report(w io.Writer, result *Result) error {
 
 	// Print violations grouped by file
 	for _, file := range r.sortedKeys(fileViolations) {
-		fmt.Fprintf(w, "\n%s%s%s\n", r.color(colorCyan), file, r.colorReset())
+		_, _ = fmt.Fprintf(w, "\n%s%s%s\n", r.color(colorCyan), file, r.colorReset())
 		for _, v := range fileViolations[file] {
 			r.writeViolation(w, v)
 		}
 	}
 
 	// Print summary
-	fmt.Fprintln(w, "")
+	_, _ = fmt.Fprintln(w, "")
 	r.writeSummary(w, NewSummary(result))
 
 	return nil
@@ -64,7 +64,7 @@ func (r *TextReporter) writeViolation(w io.Writer, v rules.Violation) {
 	icon := r.formatSeverity(v.Severity)
 	color := r.severityColor(v.Severity)
 
-	fmt.Fprintf(w, "  %s %s[%s]%s %s\n",
+	_, _ = fmt.Fprintf(w, "  %s %s[%s]%s %s\n",
 		icon,
 		r.color(color),
 		strings.ToUpper(v.Severity.String()),
@@ -73,37 +73,37 @@ func (r *TextReporter) writeViolation(w io.Writer, v rules.Violation) {
 	)
 
 	if v.ChangeSetID != "" {
-		fmt.Fprintf(w, "    Changeset: %s (author: %s)\n", v.ChangeSetID, v.Author)
+		_, _ = fmt.Fprintf(w, "    Changeset: %s (author: %s)\n", v.ChangeSetID, v.Author)
 	}
 	if v.Line != "" {
 		if v.LineNumber > 0 {
-			fmt.Fprintf(w, "    Line %d: %s\n", v.LineNumber, v.Line)
+			_, _ = fmt.Fprintf(w, "    Line %d: %s\n", v.LineNumber, v.Line)
 		} else {
-			fmt.Fprintf(w, "    SQL: %s\n", v.Line)
+			_, _ = fmt.Fprintf(w, "    SQL: %s\n", v.Line)
 		}
 	}
-	fmt.Fprintf(w, "    Rule: %s\n", v.Rule)
+	_, _ = fmt.Fprintf(w, "    Rule: %s\n", v.Rule)
 }
 
 // writeSummary writes the summary section
 func (r *TextReporter) writeSummary(w io.Writer, summary Summary) {
-	fmt.Fprintf(w, "%s=== SUMMARY ===%s\n", r.color(colorBold), r.colorReset())
-	fmt.Fprintf(w, "Total Issues: %d\n", summary.TotalViolations)
+	_, _ = fmt.Fprintf(w, "%s=== SUMMARY ===%s\n", r.color(colorBold), r.colorReset())
+	_, _ = fmt.Fprintf(w, "Total Issues: %d\n", summary.TotalViolations)
 
 	if summary.CriticalCount > 0 {
-		fmt.Fprintf(w, "  %sCritical: %d%s\n",
+		_, _ = fmt.Fprintf(w, "  %sCritical: %d%s\n",
 			r.color(colorRed), summary.CriticalCount, r.colorReset())
 	}
 	if summary.WarningCount > 0 {
-		fmt.Fprintf(w, "  %sWarning:  %d%s\n",
+		_, _ = fmt.Fprintf(w, "  %sWarning:  %d%s\n",
 			r.color(colorYellow), summary.WarningCount, r.colorReset())
 	}
 	if summary.InfoCount > 0 {
-		fmt.Fprintf(w, "  %sInfo:     %d%s\n",
+		_, _ = fmt.Fprintf(w, "  %sInfo:     %d%s\n",
 			r.color(colorBlue), summary.InfoCount, r.colorReset())
 	}
 
-	fmt.Fprintf(w, "Files Checked: %d\n", summary.FileCount)
+	_, _ = fmt.Fprintf(w, "Files Checked: %d\n", summary.FileCount)
 }
 
 // formatSeverity returns an icon for the severity level

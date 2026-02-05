@@ -90,6 +90,7 @@ output:
 severity_threshold: critical
 `
 
+	//nolint:gosec // G306: Test configuration file, permissions are acceptable
 	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
 		t.Fatalf("Failed to create test config file: %v", err)
 	}
@@ -138,6 +139,7 @@ func TestLoad_InvalidYAML(t *testing.T) {
   this is not: valid: yaml::
 `
 
+	//nolint:gosec // G306: Test configuration file, permissions are acceptable
 	if err := os.WriteFile(configPath, []byte(invalidContent), 0644); err != nil {
 		t.Fatalf("Failed to create test config file: %v", err)
 	}
@@ -249,6 +251,7 @@ func TestInitConfig(t *testing.T) {
 	}
 
 	// Read and verify content
+	//nolint:gosec // G304: Test file reading, path is controlled
 	data, err := os.ReadFile(configPath)
 	if err != nil {
 		t.Fatalf("Failed to read created config file: %v", err)
@@ -275,6 +278,7 @@ func TestInitConfig_FileExists(t *testing.T) {
 	configPath := filepath.Join(tmpDir, ".liquibase-linter.yaml")
 
 	// Create file first
+	//nolint:gosec // G306: Test file, permissions are acceptable
 	if err := os.WriteFile(configPath, []byte("test"), 0644); err != nil {
 		t.Fatalf("Failed to create test file: %v", err)
 	}

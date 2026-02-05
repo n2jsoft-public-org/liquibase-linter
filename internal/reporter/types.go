@@ -12,6 +12,7 @@ import (
 // Format represents the output format type
 type Format string
 
+// Supported output formats for linting results
 const (
 	FormatText  Format = "text"
 	FormatJSON  Format = "json"

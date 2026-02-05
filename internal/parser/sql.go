@@ -32,11 +32,14 @@ var (
 
 // Parse parses a SQL-formatted changelog file.
 func (p *SQLParser) Parse(filePath string) (*Changelog, error) {
+	//nolint:gosec // G304: File path is provided by user for parsing
 	file, err := os.Open(filePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open file: %w", err)
 	}
-	defer file.Close()
+	defer func() {
+		_ = file.Close()
+	}()
 
 	changelog := &Changelog{
 		FilePath:      filePath,

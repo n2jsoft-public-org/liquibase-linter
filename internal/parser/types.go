@@ -47,6 +47,8 @@ type parseContext struct {
 }
 
 // newParseContext creates a new parse context with initial values
+//
+//nolint:unparam // maxDepth is a configurable parameter, even though currently always 10
 func newParseContext(maxDepth int, followSymlinks bool) *parseContext {
 	processedFiles := []string{}
 	return &parseContext{

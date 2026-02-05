@@ -240,6 +240,7 @@ type xmlProperty struct {
 // Parse parses an XML changelog file.
 func (p *XMLParser) Parse(filePath string) (*Changelog, error) {
 	// Read file
+	//nolint:gosec // G304: File path is provided by user for parsing
 	data, err := os.ReadFile(filePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read file: %w", err)

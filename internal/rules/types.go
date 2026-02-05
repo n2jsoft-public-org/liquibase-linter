@@ -140,12 +140,14 @@ func ReadLineFromFile(filePath string, lineNumber int) string {
 	if lineNumber <= 0 {
 		return ""
 	}
-
+	//nolint:gosec // G304: File path is provided by user for linting
 	file, err := os.Open(filePath)
 	if err != nil {
 		return ""
 	}
-	defer file.Close()
+	defer func() {
+		_ = file.Close()
+	}()
 
 	scanner := bufio.NewScanner(file)
 	currentLine := 0

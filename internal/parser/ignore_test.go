@@ -106,9 +106,11 @@ func TestYAMLParser_IncludeAllWithIgnore(t *testing.T) {
 	initDir := filepath.Join(tmpDir, "changelog", "init")
 	sprintDir := filepath.Join(tmpDir, "changelog", "sprints", "v116")
 
+	//nolint:gosec // G301: Test directory, permissions are acceptable
 	if err := os.MkdirAll(initDir, 0755); err != nil {
 		t.Fatal(err)
 	}
+	//nolint:gosec // G301: Test directory, permissions are acceptable
 	if err := os.MkdirAll(sprintDir, 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -126,9 +128,11 @@ CREATE TABLE test (id INT);
 CREATE TABLE sprint (id INT);
 `
 
+	//nolint:gosec // G306: Test file, permissions are acceptable
 	if err := os.WriteFile(initSQL, []byte(initContent), 0644); err != nil {
 		t.Fatal(err)
 	}
+	//nolint:gosec // G306: Test file, permissions are acceptable
 	if err := os.WriteFile(sprintSQL, []byte(sprintContent), 0644); err != nil {
 		t.Fatal(err)
 	}
@@ -139,6 +143,7 @@ CREATE TABLE sprint (id INT);
   - includeAll:
       path: changelog
 `
+	//nolint:gosec // G306: Test file, permissions are acceptable
 	if err := os.WriteFile(masterPath, []byte(masterContent), 0644); err != nil {
 		t.Fatal(err)
 	}

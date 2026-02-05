@@ -229,6 +229,7 @@ func Load(configPath string) (*Config, error) {
 	}
 
 	// Read file
+	//nolint:gosec // G304: File path is provided by user for configuration
 	data, err := os.ReadFile(configPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read configuration file: %w", err)
@@ -322,6 +323,7 @@ func InitConfig(path string) error {
 	data = append([]byte(header), data...)
 
 	// Write to file
+	//nolint:gosec // G306: Config file permissions are intentionally 0644 for readability
 	if err := os.WriteFile(path, data, 0644); err != nil {
 		return fmt.Errorf("failed to write configuration file: %w", err)
 	}

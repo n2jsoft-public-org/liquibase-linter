@@ -20,6 +20,7 @@ func (p *JSONParser) Parse(filePath string) (*Changelog, error) {
 // ParseWithConfig parses a JSON changelog file with ignore patterns for filtering includes.
 func (p *JSONParser) ParseWithConfig(filePath string, ignorePatterns []string, basePath string) (*Changelog, error) {
 	// Read file
+	//nolint:gosec // G304: File path is provided by user for parsing
 	data, err := os.ReadFile(filePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read file: %w", err)

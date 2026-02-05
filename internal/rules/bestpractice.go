@@ -223,13 +223,14 @@ func (r *NamingConventionRule) Check(changelog *parser.Changelog) []Violation {
 			var objectType string
 
 			// Check table names
-			if change.TableName != "" {
+			switch {
+			case change.TableName != "":
 				name = change.TableName
 				objectType = "table"
-			} else if change.IndexName != "" {
+			case change.IndexName != "":
 				name = change.IndexName
 				objectType = "index"
-			} else if change.ColumnName != "" {
+			case change.ColumnName != "":
 				name = change.ColumnName
 				objectType = "column"
 			}

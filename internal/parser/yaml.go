@@ -27,6 +27,7 @@ func (p *YAMLParser) Parse(filePath string) (*Changelog, error) {
 // ParseWithConfig parses a YAML changelog file with ignore patterns for filtering includes.
 func (p *YAMLParser) ParseWithConfig(filePath string, ignorePatterns []string, basePath string) (*Changelog, error) {
 	// Read file
+	//nolint:gosec // G304: File path is provided by user for parsing
 	data, err := os.ReadFile(filePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read file: %w", err)
@@ -288,7 +289,7 @@ func (p *YAMLParser) parseRollback(data any, filePath, changesetID string) (*Rol
 }
 
 // parsePreconditions parses precondition element
-func (p *YAMLParser) parsePreconditions(data any, filePath, changesetID string) (*Precondition, error) {
+func (p *YAMLParser) parsePreconditions(data any, _ /* filePath */, _ /* changesetID */ string) (*Precondition, error) {
 	pcMap, ok := data.(map[string]any)
 	if !ok {
 		return nil, fmt.Errorf("preconditions must be an object")
@@ -457,6 +458,7 @@ func parseFileWithContext(filePath string, ctx *parseContext) (*Changelog, error
 	switch format {
 	case FormatYAML:
 		// Read and parse YAML
+		//nolint:gosec // G304: File path is provided by user for parsing
 		data, err := os.ReadFile(filePath)
 		if err != nil {
 			return nil, fmt.Errorf("failed to read file: %w", err)
@@ -484,6 +486,7 @@ func parseFileWithContext(filePath string, ctx *parseContext) (*Changelog, error
 
 	case FormatJSON:
 		// Parse JSON
+		//nolint:gosec // G304: File path is provided by user for parsing
 		data, err := os.ReadFile(filePath)
 		if err != nil {
 			return nil, fmt.Errorf("failed to read file: %w", err)
