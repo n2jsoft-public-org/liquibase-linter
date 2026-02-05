@@ -339,12 +339,17 @@ func ParseXML(path string) (*Changelog, error) {
 - [x] Create example changelogs and test cases
 
 ### Phase 6: Polish
-- [ ] Performance optimization
+- [ ] Performance optimization (parallel parsing for large includeAll directories)
+- [ ] Add context/labels filtering support for includeAll directives
 - [ ] Release preparation (versioning, changelog)
 
-### Phase 7: Extend (Optional)
-- [ ] Implement YAML parser
-- [ ] Implement JSON parser
+### Phase 7: Extend ✅ COMPLETED
+- [x] Implement YAML parser with include/includeAll support
+- [x] Implement JSON parser with include/includeAll support
+- [x] Add resourceFilter pattern matching for includeAll
+- [x] Implement circular include detection with symlink awareness
+- [x] Add configurable max include depth
+- [x] Support mixed-format includes (YAML→XML→SQL)
 
 ## Security Rules to Implement
 

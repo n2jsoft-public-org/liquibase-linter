@@ -23,4 +23,15 @@ output:
   format: text
   colorize: true
 
+# Parser behavior configuration
+parser:
+  # Maximum depth for nested include/includeAll directives (1-100)
+  # Default: 10
+  max_include_depth: 10
+  
+  # Follow symlinks during file discovery
+  # Symlink loops are automatically detected and prevented
+  # Default: true
+  follow_symlinks: true
+
 severity_threshold: warning

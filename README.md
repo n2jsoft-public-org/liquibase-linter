@@ -110,7 +110,14 @@ Summary:
 
 ## Configuration
 
-Create a `.liquibase-linter.yaml` file in your project root:
+The linter automatically discovers `.liquibase-linter.yaml` configuration files in:
+1. The target directory (if checking a directory)
+2. Parent directories up to the project root
+3. Current working directory
+
+You can also explicitly specify a config file with `--config`.
+
+Create a `.liquibase-linter.yaml` file in your changelog directory or project root:
 
 ```yaml
 # Enable/disable rules and set severity levels
@@ -131,9 +138,10 @@ rules:
     enabled: true
     severity: info
 
-# Ignore specific files or patterns
+# Ignore specific files or patterns (relative to target directory)
 ignore:
   - "test/fixtures/*.xml"
+  - "init/**"                 # Ignore all files in init folder
   - "db/changelog/legacy/**"
 
 # Output configuration
@@ -141,11 +149,13 @@ output:
   format: text        # text, json, sarif, junit
   colorize: true      # Enable colored output (text format only)
 
-# Minimum severity to report
-severity_threshold: info  # info, warning, critical
+# Parser configuration
+parser:
+  max_include_depth: 10    # Maximum nesting for include/includeAll
+  follow_symlinks: true    # Follow symlinks during file discovery
 
-# Exit with error on violations at this level or higher
-fail_on: critical
+# Minimum severity to report
+severity_threshold: warning  # info, warning, critical
 ```
 
 See [Configuration Guide](docs/configuration.md) for all options.

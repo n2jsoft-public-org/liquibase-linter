@@ -8,6 +8,53 @@ import (
 	"strings"
 )
 
+// CircularIncludeError represents an error when circular includes are detected.
+type CircularIncludeError struct {
+	IncludeChain   []string
+	IsSymlinkCycle bool
+}
+
+func (e *CircularIncludeError) Error() string {
+	chain := strings.Join(e.IncludeChain, " → ")
+	if e.IsSymlinkCycle {
+		return fmt.Sprintf("circular include via symlinks detected: %s", chain)
+	}
+	return fmt.Sprintf("circular include detected: %s", chain)
+}
+
+// MaxDepthExceededError represents an error when max include depth is exceeded.
+type MaxDepthExceededError struct {
+	IncludeChain []string
+	MaxDepth     int
+}
+
+func (e *MaxDepthExceededError) Error() string {
+	chain := strings.Join(e.IncludeChain, " → ")
+	return fmt.Sprintf("maximum include depth of %d exceeded: %s", e.MaxDepth, chain)
+}
+
+// parseContext holds context for parsing with includes
+type parseContext struct {
+	visitedFiles       map[string]bool
+	symlinkResolutions map[string]string
+	currentDepth       int
+	includeChain       []string
+	maxDepth           int
+	followSymlinks     bool
+}
+
+// newParseContext creates a new parse context with initial values
+func newParseContext(maxDepth int, followSymlinks bool) *parseContext {
+	return &parseContext{
+		visitedFiles:       make(map[string]bool),
+		symlinkResolutions: make(map[string]string),
+		currentDepth:       0,
+		includeChain:       []string{},
+		maxDepth:           maxDepth,
+		followSymlinks:     followSymlinks,
+	}
+}
+
 // ChangelogFormat represents the format of a changelog file.
 type ChangelogFormat string
 
@@ -111,8 +158,10 @@ func Parse(filePath string) (*Changelog, error) {
 		parser = &XMLParser{}
 	case FormatSQL:
 		parser = &SQLParser{}
-	case FormatYAML, FormatJSON:
-		return nil, fmt.Errorf("format %s not yet implemented (Phase 6)", format)
+	case FormatYAML:
+		parser = &YAMLParser{}
+	case FormatJSON:
+		parser = &JSONParser{}
 	default:
 		return nil, fmt.Errorf("unsupported file format: %s", filePath)
 	}

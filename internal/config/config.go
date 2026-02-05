@@ -15,6 +15,7 @@ type Config struct {
 	Rules             map[string]RuleConfig `yaml:"rules"`
 	Ignore            []string              `yaml:"ignore"`
 	Output            OutputConfig          `yaml:"output"`
+	Parser            ParserConfig          `yaml:"parser"`
 	SeverityThreshold string                `yaml:"severity_threshold"`
 }
 
@@ -28,6 +29,16 @@ type RuleConfig struct {
 type OutputConfig struct {
 	Format   string `yaml:"format"`
 	Colorize bool   `yaml:"colorize"`
+}
+
+// ParserConfig represents parser behavior configuration.
+type ParserConfig struct {
+	// MaxIncludeDepth is the maximum depth for nested include/includeAll directives.
+	// Must be between 1 and 100. Default is 10.
+	MaxIncludeDepth int `yaml:"max_include_depth"`
+	// FollowSymlinks determines whether symlinks should be followed during file discovery.
+	// Default is true. Symlink loops are automatically detected and prevented.
+	FollowSymlinks bool `yaml:"follow_symlinks"`
 }
 
 // Default returns a Config with default values.
@@ -59,6 +70,10 @@ func Default() *Config {
 		Output: OutputConfig{
 			Format:   "text",
 			Colorize: true,
+		},
+		Parser: ParserConfig{
+			MaxIncludeDepth: 10,
+			FollowSymlinks:  true,
 		},
 		SeverityThreshold: "warning",
 	}
@@ -125,6 +140,11 @@ func (c *Config) Validate() error {
 		if ruleConfig.Severity != "" && !validSeverities[ruleConfig.Severity] {
 			return fmt.Errorf("invalid severity for rule %s: %s", ruleName, ruleConfig.Severity)
 		}
+	}
+
+	// Validate parser configuration
+	if c.Parser.MaxIncludeDepth < 1 || c.Parser.MaxIncludeDepth > 100 {
+		return fmt.Errorf("max_include_depth must be between 1 and 100, got %d", c.Parser.MaxIncludeDepth)
 	}
 
 	return nil

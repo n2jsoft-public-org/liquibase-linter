@@ -48,6 +48,42 @@ go build -o liquibase-linter ./cmd/liquibase-linter
 
 ## Basic Usage
 
+### Supported Changelog Formats
+
+The linter supports all major Liquibase changelog formats:
+
+- **XML** (`.xml`) - Traditional Liquibase format with full feature support
+- **YAML** (`.yaml`, `.yml`) - YAML format with `include` and `includeAll` directives
+- **JSON** (`.json`) - JSON format with `include` and `includeAll` directives
+- **SQL** (`.sql`) - Formatted SQL with Liquibase comments
+
+#### Include and IncludeAll Support
+
+YAML and JSON changelogs support `include` and `includeAll` directives:
+
+```yaml
+databaseChangeLog:
+  # Include a single file
+  - include:
+      file: changelog/v1.0.xml
+  
+  # Include all files in a directory
+  - includeAll:
+      path: changelog/migrations/
+      resourceFilter: "**/*.sql"
+```
+
+**Features:**
+- Mixed-format includes (YAML can include XML, SQL, or other YAML files)
+- Recursive directory scanning with `includeAll`
+- Resource filtering with glob patterns (e.g., `**/*.sql`, `v*/*.xml`)
+- Circular include detection with symlink awareness
+- Configurable maximum include depth (default: 10 levels)
+
+**Current Limitations:**
+- The `context` and `labels` attributes for `includeAll` are not yet supported and will be added in a future release
+- All files matching the filter will be included regardless of context/labels
+
 ### Check a Single File
 
 ```bash

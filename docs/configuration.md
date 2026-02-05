@@ -6,6 +6,29 @@ This guide explains how to configure the Liquibase Linter for your project.
 
 The linter uses a YAML configuration file (`.liquibase-linter.yaml` by default) to define rules, ignore patterns, and output settings.
 
+### Auto-Discovery
+
+The linter automatically searches for a configuration file in the following order:
+
+1. **Specified config path** (if `--config` flag is provided)
+2. **Target directory** (if checking a directory)
+3. **Parent directory of target file** (if checking a single file)
+4. **Current working directory**
+5. **Parent directories** (walking up to the filesystem root)
+
+The linter looks for these filenames:
+- `.liquibase-linter.yaml`
+- `.liquibase-linter.yml`
+
+**Example:**
+```bash
+# Config file will be auto-discovered from the changelog directory
+liquibase-linter check db/changelog/
+
+# Or explicitly specify a config file
+liquibase-linter check --config=.liquibase-linter.yaml db/changelog/
+```
+
 ### Creating a Configuration File
 
 ```bash
@@ -46,6 +69,15 @@ ignore:
 output:
   format: text        # Options: text, json, sarif, junit
   colorize: true      # Enable colored output (text format only)
+
+# Parser behavior configuration
+parser:
+  # Maximum depth for nested include/includeAll directives (1-100)
+  max_include_depth: 10
+  
+  # Follow symlinks during file discovery
+  # Symlink loops are automatically detected and prevented
+  follow_symlinks: true
 
 # Minimum severity to report
 severity_threshold: warning  # Options: info, warning, critical
@@ -88,14 +120,81 @@ liquibase-linter check --config=.custom-config.yaml db/changelog/
 
 ## Ignore Patterns
 
-Use glob patterns to exclude files from linting:
+Use glob patterns to exclude files from linting. Patterns are matched against paths **relative to the target directory** being checked.
 
 ```yaml
 ignore:
   - "test/**/*.xml"          # All XML files in test directories
-  - "fixtures/**"            # Everything in fixtures directories
-  - "db/changelog/old/*.sql" # Specific directory
+  - "fixtures/**"            # Everything in fixtures directories  
+  - "init/**"                # Ignore entire init folder
+  - "db/changelog/old/*.sql" # Specific directory with .sql files
+  - "**/*-rollback.sql"      # All files ending in -rollback.sql at any depth
 ```
+
+### Pattern Matching Rules
+
+- **Patterns are relative**: Matched against paths relative to the directory being checked
+- **`**` matches recursively**: Use `init/**` to match all files in init/ at any depth
+- **`*` matches within a directory**: Use `*.xml` to match XML files in a single directory
+- **Directory matching**: Patterns like `init/**` match all files within that directory tree
+
+**Examples:**
+
+If your changelog structure is:
+```
+changelog/
+  .liquibase-linter.yaml
+  init/
+    001-schema.sql
+    002-data.sql
+  sprints/
+    v1/
+      001-feature.sql
+```
+
+And you run: `liquibase-linter check changelog/`
+
+Then the pattern `init/**` will match:
+- ✅ `init/001-schema.sql`
+- ✅ `init/002-data.sql`
+- ❌ `sprints/v1/001-feature.sql`
+
+## Parser Configuration
+
+### Max Include Depth
+
+Control the maximum nesting level for `include` and `includeAll` directives:
+
+```yaml
+parser:
+  max_include_depth: 10  # Must be between 1 and 100
+```
+
+This prevents infinite loops and excessively deep include hierarchies. If your changelog structure legitimately requires deeper nesting, you can increase this value.
+
+**Common scenarios:**
+- Default (10): Sufficient for most projects with typical include hierarchies
+- Shallow (5): Recommended for simpler projects to catch accidental deep nesting
+- Deep (20+): May be needed for large monorepos with complex changelog organization
+
+### Symlink Following
+
+Control whether symlinks are followed during file discovery:
+
+```yaml
+parser:
+  follow_symlinks: true  # Default: true
+```
+
+When enabled:
+- Symlinked files and directories are processed
+- Symlink loops are automatically detected and prevented
+- Resolved paths are tracked to avoid duplicate processing
+
+When disabled:
+- Symlinks are skipped entirely
+- Useful if symlinks cause issues in your build environment
+- Slightly faster for projects without symlinks
 
 ## Output Formats
 

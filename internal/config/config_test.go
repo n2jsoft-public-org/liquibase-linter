@@ -199,6 +199,10 @@ func TestValidate_ValidConfig(t *testing.T) {
 					Format:   "json",
 					Colorize: false,
 				},
+				Parser: ParserConfig{
+					MaxIncludeDepth: 10,
+					FollowSymlinks:  true,
+				},
 				SeverityThreshold: "info",
 			},
 		},
@@ -210,6 +214,10 @@ func TestValidate_ValidConfig(t *testing.T) {
 				Output: OutputConfig{
 					Format:   "sarif",
 					Colorize: false,
+				},
+				Parser: ParserConfig{
+					MaxIncludeDepth: 10,
+					FollowSymlinks:  true,
 				},
 				SeverityThreshold: "critical",
 			},
