@@ -1,0 +1,26 @@
+rules:
+  sql-injection:
+    enabled: true
+    severity: critical
+  hardcoded-credentials:
+    enabled: true
+    severity: critical
+  dangerous-operations:
+    enabled: true
+    severity: critical
+  missing-rollback:
+    enabled: true
+    severity: warning
+  non-idempotent:
+    enabled: true
+    severity: warning
+
+ignore:
+  - "test/**/*.xml"
+  - "fixtures/**/*.sql"
+
+output:
+  format: text
+  colorize: true
+
+severity_threshold: warning

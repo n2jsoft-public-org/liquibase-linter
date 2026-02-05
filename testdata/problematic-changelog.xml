@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+    http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.0.xsd">
+
+    <!-- Missing rollback -->
+    <changeSet id="1" author="test">
+        <createTable tableName="orders">
+            <column name="id" type="int" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+    <!-- Dangerous operation without preconditions -->
+    <changeSet id="2" author="test">
+        <dropTable tableName="important_data"/>
+    </changeSet>
+
+    <!-- SQL injection vulnerability (string concatenation) -->
+    <changeSet id="3" author="test">
+        <sql>
+            DELETE FROM users WHERE username = '${username}';
+        </sql>
+    </changeSet>
+
+</databaseChangeLog>

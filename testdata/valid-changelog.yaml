@@ -1,0 +1,43 @@
+databaseChangeLog:
+  - changeSet:
+      id: 1
+      author: test
+      changes:
+        - createTable:
+            tableName: products
+            columns:
+              - column:
+                  name: id
+                  type: int
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: name
+                  type: varchar(100)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: price
+                  type: decimal(10,2)
+                  constraints:
+                    nullable: false
+      rollback:
+        - dropTable:
+            tableName: products
+
+  - changeSet:
+      id: 2
+      author: test
+      changes:
+        - addColumn:
+            tableName: products
+            columns:
+              - column:
+                  name: description
+                  type: text
+      rollback:
+        - dropColumn:
+            tableName: products
+            columnName: description
