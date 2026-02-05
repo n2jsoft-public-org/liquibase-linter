@@ -33,13 +33,15 @@ type JSONSummary struct {
 
 // JSONViolation represents a single violation in JSON format
 type JSONViolation struct {
-	Rule        string `json:"rule"`
-	Severity    string `json:"severity"`
-	Message     string `json:"message"`
-	FilePath    string `json:"file_path"`
-	LineNumber  int    `json:"line_number,omitempty"`
-	ChangeSetID string `json:"changeset_id,omitempty"`
-	Author      string `json:"author,omitempty"`
+	Rule          string `json:"rule"`
+	Severity      string `json:"severity"`
+	Message       string `json:"message"`
+	FilePath      string `json:"file_path"`
+	LineNumber    int    `json:"line_number,omitempty"`
+	Line          string `json:"line,omitempty"`
+	SQLLineNumber int    `json:"sql_line_number,omitempty"` // Line number within the SQL content
+	ChangeSetID   string `json:"changeset_id,omitempty"`
+	Author        string `json:"author,omitempty"`
 }
 
 // Report implements the Reporter interface for JSON output
@@ -63,15 +65,21 @@ func (r *JSONReporter) Report(w io.Writer, result *Result) error {
 	}
 
 	for _, v := range result.Violations {
-		output.Violations = append(output.Violations, JSONViolation{
+		jsonViolation := JSONViolation{
 			Rule:        v.Rule,
 			Severity:    v.Severity.String(),
 			Message:     v.Message,
 			FilePath:    v.FilePath,
-			LineNumber:  v.LineNumber,
+			Line:        v.Line,
 			ChangeSetID: v.ChangeSetID,
 			Author:      v.Author,
-		})
+		}
+		// Set line numbers: sql_line_number for lines within SQL content
+		if v.LineNumber > 0 {
+			jsonViolation.SQLLineNumber = v.LineNumber
+			jsonViolation.LineNumber = v.LineNumber // Also populate line_number for backward compatibility
+		}
+		output.Violations = append(output.Violations, jsonViolation)
 	}
 
 	encoder := json.NewEncoder(w)

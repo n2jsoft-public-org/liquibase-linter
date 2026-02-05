@@ -3,6 +3,10 @@
 package rules
 
 import (
+	"bufio"
+	"os"
+	"strings"
+
 	"github.com/n2jsoft/liquibase-linter/internal/parser"
 )
 
@@ -39,6 +43,7 @@ type Violation struct {
 	Message     string
 	FilePath    string
 	LineNumber  int
+	Line        string // The actual line content that triggered the violation
 	ChangeSetID string
 	Author      string
 }
@@ -127,4 +132,30 @@ func (r *RuleRegistry) CheckChangelog(changelog *parser.Changelog) []Violation {
 	}
 
 	return violations
+}
+
+// ReadLineFromFile reads a specific line from a file (1-indexed).
+// Returns the line content with whitespace trimmed, or empty string if line not found.
+func ReadLineFromFile(filePath string, lineNumber int) string {
+	if lineNumber <= 0 {
+		return ""
+	}
+
+	file, err := os.Open(filePath)
+	if err != nil {
+		return ""
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	currentLine := 0
+
+	for scanner.Scan() {
+		currentLine++
+		if currentLine == lineNumber {
+			return strings.TrimSpace(scanner.Text())
+		}
+	}
+
+	return ""
 }

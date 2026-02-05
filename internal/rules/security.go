@@ -50,11 +50,33 @@ func (r *SQLInjectionRule) Check(changelog *parser.Changelog) []Violation {
 			// Check all SQL patterns
 			for _, pattern := range injectionPatterns {
 				if pattern.MatchString(sql) {
+					// Find the line containing the pattern
+					lines := strings.Split(sql, "\n")
+					sqlSnippet := ""
+					lineNum := 0
+					for i, line := range lines {
+						if pattern.MatchString(line) {
+							sqlSnippet = strings.TrimSpace(line)
+							lineNum = i + 1
+							break
+						}
+					}
+					// Fallback to first line if no specific line found
+					if sqlSnippet == "" && len(lines) > 0 {
+						sqlSnippet = strings.TrimSpace(lines[0])
+						lineNum = 1
+					}
+					if len(sqlSnippet) > 100 {
+						sqlSnippet = sqlSnippet[:100] + "..."
+					}
+
 					violations = append(violations, Violation{
 						Rule:        r.ID(),
 						Severity:    r.Severity(),
 						Message:     "Potential SQL injection: SQL statement contains string concatenation or variable interpolation",
 						FilePath:    cs.FilePath,
+						LineNumber:  lineNum,
+						Line:        sqlSnippet,
 						ChangeSetID: cs.ID,
 						Author:      cs.Author,
 					})
@@ -109,12 +131,29 @@ func (r *HardcodedCredentialsRule) Check(changelog *parser.Changelog) []Violatio
 			sql := change.SQL
 
 			for _, pattern := range credentialPatterns {
-				if pattern.MatchString(sql) {
+				if match := pattern.FindString(sql); match != "" {
+					// Extract the line containing the credential
+					lines := strings.Split(sql, "\n")
+					sqlSnippet := ""
+					lineNum := 0
+					for i, line := range lines {
+						if strings.Contains(line, match) {
+							sqlSnippet = strings.TrimSpace(line)
+							lineNum = i + 1
+							if len(sqlSnippet) > 100 {
+								sqlSnippet = sqlSnippet[:100] + "..."
+							}
+							break
+						}
+					}
+
 					violations = append(violations, Violation{
 						Rule:        r.ID(),
 						Severity:    r.Severity(),
 						Message:     "Hardcoded credentials detected in SQL statement",
 						FilePath:    cs.FilePath,
+						LineNumber:  lineNum,
+						Line:        sqlSnippet,
 						ChangeSetID: cs.ID,
 						Author:      cs.Author,
 					})
@@ -177,11 +216,33 @@ func (r *DangerousOperationsRule) Check(changelog *parser.Changelog) []Violation
 			}
 
 			if isDangerous && !hasSafeguards {
+				// Find the line containing the dangerous operation
+				lines := strings.Split(change.SQL, "\n")
+				sqlSnippet := ""
+				lineNum := 0
+				for i, line := range lines {
+					if strings.Contains(strings.ToUpper(line), operation) {
+						sqlSnippet = strings.TrimSpace(line)
+						lineNum = i + 1
+						break
+					}
+				}
+				// Fallback to first line if not found
+				if sqlSnippet == "" && len(lines) > 0 {
+					sqlSnippet = strings.TrimSpace(lines[0])
+					lineNum = 1
+				}
+				if len(sqlSnippet) > 100 {
+					sqlSnippet = sqlSnippet[:100] + "..."
+				}
+
 				violations = append(violations, Violation{
 					Rule:        r.ID(),
 					Severity:    r.Severity(),
 					Message:     "Dangerous operation " + operation + " without preconditions or context restrictions",
 					FilePath:    cs.FilePath,
+					LineNumber:  lineNum,
+					Line:        sqlSnippet,
 					ChangeSetID: cs.ID,
 					Author:      cs.Author,
 				})
@@ -233,12 +294,29 @@ func (r *PrivilegeEscalationRule) Check(changelog *parser.Changelog) []Violation
 			sql := change.SQL
 
 			for _, pattern := range privilegePatterns {
-				if pattern.MatchString(sql) {
+				if match := pattern.FindString(sql); match != "" {
+					// Extract the line containing the privilege grant
+					lines := strings.Split(sql, "\n")
+					sqlSnippet := ""
+					lineNum := 0
+					for i, line := range lines {
+						if strings.Contains(strings.ToUpper(line), strings.ToUpper(match)) {
+							sqlSnippet = strings.TrimSpace(line)
+							lineNum = i + 1
+							if len(sqlSnippet) > 100 {
+								sqlSnippet = sqlSnippet[:100] + "..."
+							}
+							break
+						}
+					}
+
 					violations = append(violations, Violation{
 						Rule:        r.ID(),
 						Severity:    r.Severity(),
 						Message:     "Excessive privilege grant detected",
 						FilePath:    cs.FilePath,
+						LineNumber:  lineNum,
+						Line:        sqlSnippet,
 						ChangeSetID: cs.ID,
 						Author:      cs.Author,
 					})

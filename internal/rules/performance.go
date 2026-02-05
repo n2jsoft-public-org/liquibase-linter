@@ -135,20 +135,45 @@ func (r *TableLockRule) Check(changelog *parser.Changelog) []Violation {
 				changeTypeUpper := strings.ToUpper(change.Type)
 
 				isLocking := false
+				matchedOp := ""
 				for _, op := range lockingOperations {
 					if strings.Contains(sqlUpper, op) ||
 						(strings.Contains(changeTypeUpper, "ADD") || strings.Contains(changeTypeUpper, "ALTER")) {
 						isLocking = true
+						matchedOp = op
 						break
 					}
 				}
 
 				if isLocking {
+					// Find the line containing the locking operation
+					lines := strings.Split(change.SQL, "\n")
+					sqlSnippet := ""
+					lineNum := 0
+					for i, line := range lines {
+						lineUpper := strings.ToUpper(line)
+						if strings.Contains(lineUpper, matchedOp) || strings.Contains(lineUpper, "ALTER") || strings.Contains(lineUpper, "ADD") {
+							sqlSnippet = strings.TrimSpace(line)
+							lineNum = i + 1
+							break
+						}
+					}
+					// Fallback to first line if not found
+					if sqlSnippet == "" && len(lines) > 0 {
+						sqlSnippet = strings.TrimSpace(lines[0])
+						lineNum = 1
+					}
+					if len(sqlSnippet) > 100 {
+						sqlSnippet = sqlSnippet[:100] + "..."
+					}
+
 					violations = append(violations, Violation{
 						Rule:        r.ID(),
 						Severity:    r.Severity(),
 						Message:     "Operation may cause table locks in production (consider using context or online DDL)",
 						FilePath:    cs.FilePath,
+						LineNumber:  lineNum,
+						Line:        sqlSnippet,
 						ChangeSetID: cs.ID,
 						Author:      cs.Author,
 					})

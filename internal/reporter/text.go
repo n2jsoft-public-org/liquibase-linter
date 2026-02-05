@@ -75,6 +75,13 @@ func (r *TextReporter) writeViolation(w io.Writer, v rules.Violation) {
 	if v.ChangeSetID != "" {
 		fmt.Fprintf(w, "    Changeset: %s (author: %s)\n", v.ChangeSetID, v.Author)
 	}
+	if v.Line != "" {
+		if v.LineNumber > 0 {
+			fmt.Fprintf(w, "    %s:%d: %s\n", v.FilePath, v.LineNumber, v.Line)
+		} else {
+			fmt.Fprintf(w, "    SQL: %s\n", v.Line)
+		}
+	}
 	fmt.Fprintf(w, "    Rule: %s\n", v.Rule)
 }
 
