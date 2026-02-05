@@ -24,7 +24,7 @@ Enforces that changeset labels match a configured pattern (e.g., sprint versions
 
 ### 3. No Manual Transactions
 **File**: [no-manual-transactions.md](no-manual-transactions.md)  
-**Status**: 📋 Planned  
+**Status**: ✅ Implemented  
 **Priority**: Medium  
 **Effort**: 4-5 hours
 

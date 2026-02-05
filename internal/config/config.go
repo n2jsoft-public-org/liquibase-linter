@@ -12,13 +12,14 @@ import (
 
 // Config represents the complete configuration for the linter.
 type Config struct {
-	Rules             map[string]RuleConfig `yaml:"rules"`
-	Ignore            []string              `yaml:"ignore"`
-	Output            OutputConfig          `yaml:"output"`
-	Parser            ParserConfig          `yaml:"parser"`
-	FileStructure     FileStructureConfig   `yaml:"file_structure"`
-	LabelPattern      LabelPatternConfig    `yaml:"label_pattern"`
-	SeverityThreshold string                `yaml:"severity_threshold"`
+	Rules                map[string]RuleConfig       `yaml:"rules"`
+	Ignore               []string                    `yaml:"ignore"`
+	Output               OutputConfig                `yaml:"output"`
+	Parser               ParserConfig                `yaml:"parser"`
+	FileStructure        FileStructureConfig         `yaml:"file_structure"`
+	LabelPattern         LabelPatternConfig          `yaml:"label_pattern"`
+	NoManualTransactions NoManualTransactionsConfig  `yaml:"no_manual_transactions"`
+	SeverityThreshold    string                      `yaml:"severity_threshold"`
 }
 
 // RuleConfig represents configuration for a single rule.
@@ -91,6 +92,20 @@ type LabelPatternConfig struct {
 	ExcludePatterns []string `yaml:"exclude_patterns"`
 }
 
+// NoManualTransactionsConfig represents configuration for no-manual-transactions rule.
+type NoManualTransactionsConfig struct {
+	// Enabled determines if the rule is active.
+	Enabled bool `yaml:"enabled"`
+	// Patterns are regex patterns to match transaction control keywords.
+	Patterns []string `yaml:"patterns"`
+	// CaseInsensitive determines if pattern matching is case-insensitive.
+	CaseInsensitive bool `yaml:"case_insensitive"`
+	// ExcludeChangeTypes are change types to skip (e.g., createProcedure).
+	ExcludeChangeTypes []string `yaml:"exclude_change_types"`
+	// ExcludePatterns are glob patterns to exclude from checking.
+	ExcludePatterns []string `yaml:"exclude_patterns"`
+}
+
 // Default returns a Config with default values.
 func Default() *Config {
 	return &Config{
@@ -117,6 +132,10 @@ func Default() *Config {
 				Mode:            ModeRiskyOnly,
 				ExcludePatterns: []string{"**/init/**", "**/seed/**"},
 			},
+			"no-manual-transactions": {
+				Enabled:  true,
+				Severity: "warning",
+			},
 		},
 		Ignore: []string{},
 		Output: OutputConfig{
@@ -141,6 +160,22 @@ func Default() *Config {
 			Pattern:         `^v\d+$`,
 			RequireLabel:    true,
 			ExcludePatterns: []string{"**/init/**"},
+		},
+		NoManualTransactions: NoManualTransactionsConfig{
+			Enabled: true,
+			Patterns: []string{
+				`\bBEGIN\s+(TRANSACTION|TRAN|WORK)?\b`,
+				`\bSTART\s+TRANSACTION\b`,
+				`\bCOMMIT\s+(TRANSACTION|TRAN|WORK)?\b`,
+				`\bROLLBACK(\s+(TRANSACTION|TRAN|WORK))?\b`,
+				`\bSAVE(POINT)?\s+TRANSACTION\b`,
+			},
+			CaseInsensitive: true,
+			ExcludeChangeTypes: []string{
+				"createProcedure",
+				"createFunction",
+				"createTrigger",
+			},
 		},
 		SeverityThreshold: "warning",
 	}

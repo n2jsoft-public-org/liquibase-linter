@@ -878,3 +878,57 @@ func (r *LabelPatternRule) shouldExclude(filePath string) bool {
 
 	return false
 }
+
+// RedundantOnErrorHaltRule detects redundant onError:HALT in preconditions.
+type RedundantOnErrorHaltRule struct{}
+
+// NewRedundantOnErrorHaltRule creates a new redundant onError:HALT rule.
+func NewRedundantOnErrorHaltRule() *RedundantOnErrorHaltRule {
+	return &RedundantOnErrorHaltRule{}
+}
+
+// ID returns the unique identifier for this rule.
+func (r *RedundantOnErrorHaltRule) ID() string {
+	return "redundant-onerror-halt"
+}
+
+// Name returns the human-readable name of this rule.
+func (r *RedundantOnErrorHaltRule) Name() string {
+	return "Redundant onError:HALT Detection"
+}
+
+// Description returns a detailed description of what this rule checks.
+func (r *RedundantOnErrorHaltRule) Description() string {
+	return "Detects redundant onError:HALT configuration - HALT is the default and doesn't need to be specified"
+}
+
+// Severity returns the severity level of violations found by this rule.
+func (r *RedundantOnErrorHaltRule) Severity() Severity {
+	return SeverityInfo
+}
+
+// Check examines a changelog for violations of this rule.
+func (r *RedundantOnErrorHaltRule) Check(changelog *parser.Changelog) []Violation {
+	violations := make([]Violation, 0)
+
+	for _, cs := range changelog.ChangeSets {
+		// Only check changesets that have preconditions
+		if cs.Preconditions == nil {
+			continue
+		}
+
+		// Check if onError is explicitly set to "HALT"
+		if strings.ToUpper(cs.Preconditions.OnError) == "HALT" {
+			violations = append(violations, Violation{
+				Rule:        r.ID(),
+				Severity:    r.Severity(),
+				Message:     "Redundant 'onError=\"HALT\"' - this is the default behavior and can be omitted",
+				FilePath:    cs.FilePath,
+				ChangeSetID: cs.ID,
+				Author:      cs.Author,
+			})
+		}
+	}
+
+	return violations
+}
