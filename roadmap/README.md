@@ -40,7 +40,7 @@ Detects redundant `onError:HALT` configuration in preconditions (HALT is the def
 
 ### 5. No IF EXISTS
 **File**: [no-if-exists.md](no-if-exists.md)  
-**Status**: 📋 Planned  
+**Status**: ✅ Implemented  
 **Priority**: Medium  
 **Effort**: 3-4 hours
 
@@ -48,7 +48,7 @@ Detects database-specific IF EXISTS patterns in SQL scripts and recommends using
 
 ### 6. Atomic Changeset
 **File**: [atomic-changeset.md](atomic-changeset.md)  
-**Status**: 📋 Planned  
+**Status**: ✅ Implemented  
 **Priority**: Medium  
 **Effort**: 7-8 hours
 

@@ -19,6 +19,7 @@ type Config struct {
 	FileStructure        FileStructureConfig        `yaml:"file_structure"`
 	LabelPattern         LabelPatternConfig         `yaml:"label_pattern"`
 	NoManualTransactions NoManualTransactionsConfig `yaml:"no_manual_transactions"`
+	AtomicChangeset      AtomicChangesetConfig      `yaml:"atomic_changeset"`
 	SeverityThreshold    string                     `yaml:"severity_threshold"`
 }
 
@@ -106,6 +107,20 @@ type NoManualTransactionsConfig struct {
 	ExcludePatterns []string `yaml:"exclude_patterns"`
 }
 
+// AtomicChangesetConfig represents configuration for atomic-changeset rule.
+type AtomicChangesetConfig struct {
+	// Enabled determines if the rule is active.
+	Enabled bool `yaml:"enabled"`
+	// AllowTableWithIndexes allows table creation with indexes as one operation.
+	AllowTableWithIndexes bool `yaml:"allow_table_with_indexes"`
+	// AllowTableWithConstraints allows table with inline constraints.
+	AllowTableWithConstraints bool `yaml:"allow_table_with_constraints"`
+	// MaxSQLStatements is the maximum number of SQL statements allowed in a single change.
+	MaxSQLStatements int `yaml:"max_sql_statements"`
+	// ExcludePatterns are glob patterns to exclude from checking.
+	ExcludePatterns []string `yaml:"exclude_patterns"`
+}
+
 // Default returns a Config with default values.
 func Default() *Config {
 	return &Config{
@@ -137,6 +152,14 @@ func Default() *Config {
 				Severity: "warning",
 			},
 			"redundant-onerror-halt": {
+				Enabled:  true,
+				Severity: "info",
+			},
+			"no-if-exists": {
+				Enabled:  true,
+				Severity: "warning",
+			},
+			"atomic-changeset": {
 				Enabled:  true,
 				Severity: "info",
 			},
@@ -180,6 +203,13 @@ func Default() *Config {
 				"createFunction",
 				"createTrigger",
 			},
+		},
+		AtomicChangeset: AtomicChangesetConfig{
+			Enabled:                   true,
+			AllowTableWithIndexes:     false,
+			AllowTableWithConstraints: true,
+			MaxSQLStatements:          1,
+			ExcludePatterns:           []string{"**/init/**"},
 		},
 		SeverityThreshold: "warning",
 	}

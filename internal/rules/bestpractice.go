@@ -2,6 +2,7 @@
 package rules
 
 import (
+	"fmt"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -931,4 +932,294 @@ func (r *RedundantOnErrorHaltRule) Check(changelog *parser.Changelog) []Violatio
 	}
 
 	return violations
+}
+
+// NoIfExistsRule detects database-specific IF EXISTS patterns in SQL scripts
+// and recommends using Liquibase preconditions instead.
+type NoIfExistsRule struct{}
+
+// NewNoIfExistsRule creates a new no-if-exists rule.
+func NewNoIfExistsRule() *NoIfExistsRule {
+	return &NoIfExistsRule{}
+}
+
+// ID returns the unique identifier for this rule.
+func (r *NoIfExistsRule) ID() string {
+	return "no-if-exists"
+}
+
+// Name returns the human-readable name of this rule.
+func (r *NoIfExistsRule) Name() string {
+	return "No IF EXISTS"
+}
+
+// Description returns a detailed description of what this rule checks.
+func (r *NoIfExistsRule) Description() string {
+	return "Detects database-specific IF EXISTS patterns and recommends Liquibase preconditions for cross-database compatibility"
+}
+
+// Severity returns the severity level of violations found by this rule.
+func (r *NoIfExistsRule) Severity() Severity {
+	return SeverityWarning
+}
+
+// Patterns to detect various IF EXISTS syntaxes across different databases
+var ifExistsPatterns = []*regexp.Regexp{
+	// SQL Server: IF EXISTS (SELECT ...) or IF NOT EXISTS (SELECT ...)
+	regexp.MustCompile(`(?i)\bIF\s+(NOT\s+)?EXISTS\s*\(`),
+
+	// SQL Server: IF OBJECT_ID('name', 'type') IS [NOT] NULL
+	regexp.MustCompile(`(?i)\bIF\s+OBJECT_ID\s*\(`),
+
+	// PostgreSQL: DO $$ BEGIN IF [NOT] EXISTS (...) THEN ... END IF; END $$;
+	regexp.MustCompile(`(?i)\bDO\s+\$\$\s*BEGIN\s+IF\s+(NOT\s+)?EXISTS`),
+
+	// MySQL: DROP PROCEDURE IF EXISTS / CREATE ... IF NOT EXISTS
+	regexp.MustCompile(`(?i)\b(DROP|CREATE)\s+(PROCEDURE|FUNCTION|TABLE|INDEX|DATABASE|SCHEMA)\s+IF\s+(NOT\s+)?EXISTS\b`),
+
+	// Generic: IF [NOT] EXISTS in procedural blocks
+	regexp.MustCompile(`(?i)\bBEGIN\s+IF\s+(NOT\s+)?EXISTS\s*\(`),
+}
+
+// Check examines a changelog for violations of this rule.
+func (r *NoIfExistsRule) Check(changelog *parser.Changelog) []Violation {
+	violations := make([]Violation, 0)
+
+	for _, cs := range changelog.ChangeSets {
+		for _, change := range cs.Changes {
+			// Only check SQL changes
+			if change.SQL == "" {
+				continue
+			}
+
+			// Preprocess SQL to remove comments and string literals
+			cleanSQL := r.preprocessSQL(change.SQL)
+
+			// Check for IF EXISTS patterns
+			for _, pattern := range ifExistsPatterns {
+				if match := pattern.FindString(cleanSQL); match != "" {
+					violations = append(violations, Violation{
+						Rule:        r.ID(),
+						Severity:    r.Severity(),
+						Message:     fmt.Sprintf("Use Liquibase preconditions instead of database-specific IF EXISTS (found: '%s'). Preconditions are cross-database compatible.", strings.TrimSpace(match)),
+						FilePath:    cs.FilePath,
+						ChangeSetID: cs.ID,
+						Author:      cs.Author,
+					})
+					break // Only report once per change
+				}
+			}
+		}
+	}
+
+	return violations
+}
+
+// preprocessSQL removes comments and string literals to avoid false positives
+func (r *NoIfExistsRule) preprocessSQL(sql string) string {
+	// Remove single-line comments (-- comment)
+	sql = regexp.MustCompile(`--[^\n]*`).ReplaceAllString(sql, "")
+
+	// Remove multi-line comments (/* comment */)
+	sql = regexp.MustCompile(`/\*[\s\S]*?\*/`).ReplaceAllString(sql, "")
+
+	// Remove single-quoted strings ('string')
+	sql = regexp.MustCompile(`'(?:[^']|'')*'`).ReplaceAllString(sql, "")
+
+	// Remove double-quoted strings ("string")
+	sql = regexp.MustCompile(`"(?:[^"]|"")*"`).ReplaceAllString(sql, "")
+
+	return sql
+}
+
+// AtomicChangesetRule enforces one change per changeset for better atomicity.
+type AtomicChangesetRule struct {
+	config *config.AtomicChangesetConfig
+}
+
+// NewAtomicChangesetRule creates a new atomic changeset rule.
+func NewAtomicChangesetRule(cfg *config.AtomicChangesetConfig) *AtomicChangesetRule {
+	return &AtomicChangesetRule{config: cfg}
+}
+
+// ID returns the unique identifier for this rule.
+func (r *AtomicChangesetRule) ID() string {
+	return "atomic-changeset"
+}
+
+// Name returns the human-readable name of this rule.
+func (r *AtomicChangesetRule) Name() string {
+	return "Atomic Changeset"
+}
+
+// Description returns a detailed description of what this rule checks.
+func (r *AtomicChangesetRule) Description() string {
+	return "Enforces that each changeset contains only a single change operation for better atomicity and rollback clarity"
+}
+
+// Severity returns the severity level of violations found by this rule.
+func (r *AtomicChangesetRule) Severity() Severity {
+	return SeverityInfo
+}
+
+// Check examines a changelog for violations of this rule.
+func (r *AtomicChangesetRule) Check(changelog *parser.Changelog) []Violation {
+	if !r.config.Enabled {
+		return nil
+	}
+
+	violations := make([]Violation, 0)
+
+	for _, cs := range changelog.ChangeSets {
+		// Check if file should be excluded
+		if r.shouldExcludeFile(cs.FilePath) {
+			continue
+		}
+
+		// Count changes in this changeset
+		changeCount := r.countChanges(&cs)
+
+		if changeCount > 1 {
+			changeTypes := r.getChangeTypes(&cs)
+			violations = append(violations, Violation{
+				Rule:     r.ID(),
+				Severity: r.Severity(),
+				Message: fmt.Sprintf("Changeset contains %d changes (%s). Consider splitting into separate changesets for better atomicity and rollback clarity.",
+					changeCount, strings.Join(changeTypes, ", ")),
+				FilePath:    cs.FilePath,
+				ChangeSetID: cs.ID,
+				Author:      cs.Author,
+			})
+		}
+	}
+
+	return violations
+}
+
+// shouldExcludeFile checks if the file path matches any exclude patterns
+func (r *AtomicChangesetRule) shouldExcludeFile(filePath string) bool {
+	if len(r.config.ExcludePatterns) == 0 {
+		return false
+	}
+
+	// Normalize path for consistent matching
+	normPath := parser.NormalizePath(filePath)
+
+	for _, pattern := range r.config.ExcludePatterns {
+		// Use MatchesResourceFilter for proper glob matching including **
+		matched, err := parser.MatchesResourceFilter(normPath, pattern)
+		if err == nil && matched {
+			return true
+		}
+	}
+
+	return false
+}
+
+// countChanges counts the number of distinct changes in a changeset
+func (r *AtomicChangesetRule) countChanges(cs *parser.ChangeSet) int {
+	count := 0
+	hasCreateTable := false
+	indexCount := 0
+
+	for _, change := range cs.Changes {
+		changeType := change.GetChangeType()
+
+		// Handle SQL changes specially - count statements
+		if change.SQL != "" {
+			sqlCount := r.countSQLStatements(change.SQL)
+			if sqlCount > r.config.MaxSQLStatements {
+				count += sqlCount
+			} else {
+				count++
+			}
+			continue
+		}
+
+		// Track table creation
+		if changeType == "createTable" {
+			hasCreateTable = true
+			count++
+			continue
+		}
+
+		// Track indexes
+		if changeType == "createIndex" {
+			indexCount++
+			count++
+			continue
+		}
+
+		// Count all other changes
+		count++
+	}
+
+	// Apply configuration-based adjustments
+	if hasCreateTable && indexCount > 0 && r.config.AllowTableWithIndexes {
+		// Treat table + indexes as one logical operation
+		count = 1
+	}
+
+	return count
+}
+
+// countSQLStatements counts the number of SQL statements in a SQL string
+func (r *AtomicChangesetRule) countSQLStatements(sql string) int {
+	// Remove comments and string literals to avoid false positives
+	cleaned := r.preprocessSQL(sql)
+
+	// Split by semicolon and count non-empty statements
+	statements := strings.Split(cleaned, ";")
+	count := 0
+
+	for _, stmt := range statements {
+		stmt = strings.TrimSpace(stmt)
+		if stmt != "" {
+			count++
+		}
+	}
+
+	// If no semicolons found, it's likely a single statement
+	if count == 0 && strings.TrimSpace(cleaned) != "" {
+		count = 1
+	}
+
+	return count
+}
+
+// preprocessSQL removes comments and string literals to avoid false statement splits
+func (r *AtomicChangesetRule) preprocessSQL(sql string) string {
+	// Remove single-line comments (-- comment)
+	sql = regexp.MustCompile(`--[^\n]*`).ReplaceAllString(sql, "")
+
+	// Remove multi-line comments (/* comment */)
+	sql = regexp.MustCompile(`/\*[\s\S]*?\*/`).ReplaceAllString(sql, "")
+
+	// Remove single-quoted strings ('string')
+	sql = regexp.MustCompile(`'(?:[^']|'')*'`).ReplaceAllString(sql, "")
+
+	// Remove double-quoted strings ("string")
+	sql = regexp.MustCompile(`"(?:[^"]|"")*"`).ReplaceAllString(sql, "")
+
+	return sql
+}
+
+// getChangeTypes returns a list of change type names in the changeset
+func (r *AtomicChangesetRule) getChangeTypes(cs *parser.ChangeSet) []string {
+	types := make([]string, 0)
+	seen := make(map[string]bool)
+
+	for _, change := range cs.Changes {
+		changeType := change.GetChangeType()
+		if changeType == "" {
+			changeType = "sql"
+		}
+
+		if !seen[changeType] {
+			types = append(types, changeType)
+			seen[changeType] = true
+		}
+	}
+
+	return types
 }
