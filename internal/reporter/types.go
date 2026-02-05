@@ -6,7 +6,7 @@ import (
 	"io"
 	"time"
 
-	"github.com/n2jsoft/liquibase-linter/internal/rules"
+	"github.com/n2jsoft-public-org/liquibase-linter/internal/rules"
 )
 
 // Format represents the output format type

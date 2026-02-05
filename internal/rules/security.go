@@ -5,7 +5,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/n2jsoft/liquibase-linter/internal/parser"
+	"github.com/n2jsoft-public-org/liquibase-linter/internal/parser"
 )
 
 // SQLInjectionRule detects potential SQL injection vulnerabilities.

@@ -3,7 +3,7 @@ package rules
 import (
 	"testing"
 
-	"github.com/n2jsoft/liquibase-linter/internal/parser"
+	"github.com/n2jsoft-public-org/liquibase-linter/internal/parser"
 )
 
 func TestRedundantOnErrorHaltRule_Check(t *testing.T) {

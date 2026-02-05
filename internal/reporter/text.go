@@ -6,7 +6,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/n2jsoft/liquibase-linter/internal/rules"
+	"github.com/n2jsoft-public-org/liquibase-linter/internal/rules"
 )
 
 // TextReporter formats output as human-readable text

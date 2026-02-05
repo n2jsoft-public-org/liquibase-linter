@@ -24,7 +24,7 @@ This guide provides information for contributors and developers working on the L
 ### Clone the Repository
 
 ```bash
-git clone https://github.com/n2jsoft/liquibase-linter.git
+git clone https://github.com/n2jsoft-public-org/liquibase-linter.git
 cd liquibase-linter
 ```
 

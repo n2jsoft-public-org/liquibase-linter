@@ -7,7 +7,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/n2jsoft/liquibase-linter/internal/parser"
+	"github.com/n2jsoft-public-org/liquibase-linter/internal/parser"
 )
 
 // Severity represents the severity level of a rule violation.

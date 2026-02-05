@@ -33,7 +33,7 @@ jobs:
 
     - name: Download Liquibase Linter
       run: |
-        curl -L -o liquibase-linter https://github.com/n2jsoft/liquibase-linter/releases/latest/download/liquibase-linter-linux-amd64
+        curl -L -o liquibase-linter https://github.com/n2jsoft-public-org/liquibase-linter/releases/latest/download/liquibase-linter-linux-amd64
         chmod +x liquibase-linter
 
     - name: Run Liquibase Linter
@@ -63,7 +63,7 @@ liquibase-lint:
   image: alpine:latest
   before_script:
     - apk add --no-cache curl
-    - curl -L -o liquibase-linter https://github.com/n2jsoft/liquibase-linter/releases/latest/download/liquibase-linter-linux-amd64
+    - curl -L -o liquibase-linter https://github.com/n2jsoft-public-org/liquibase-linter/releases/latest/download/liquibase-linter-linux-amd64
     - chmod +x liquibase-linter
   script:
     - ./liquibase-linter check --format=json db/changelog/
@@ -85,7 +85,7 @@ pipeline {
         stage('Liquibase Lint') {
             steps {
                 sh '''
-                    curl -L -o liquibase-linter https://github.com/n2jsoft/liquibase-linter/releases/latest/download/liquibase-linter-linux-amd64
+                    curl -L -o liquibase-linter https://github.com/n2jsoft-public-org/liquibase-linter/releases/latest/download/liquibase-linter-linux-amd64
                     chmod +x liquibase-linter
                     ./liquibase-linter check --format=junit db/changelog/ > results.xml
                 '''
@@ -117,7 +117,7 @@ jobs:
       - run:
           name: Download Liquibase Linter
           command: |
-            curl -L -o liquibase-linter https://github.com/n2jsoft/liquibase-linter/releases/latest/download/liquibase-linter-linux-amd64
+            curl -L -o liquibase-linter https://github.com/n2jsoft-public-org/liquibase-linter/releases/latest/download/liquibase-linter-linux-amd64
             chmod +x liquibase-linter
       - run:
           name: Run Linter

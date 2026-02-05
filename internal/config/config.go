@@ -316,7 +316,7 @@ func InitConfig(path string) error {
 
 	// Add header comment
 	header := `# Liquibase Linter Configuration
-# See documentation at: https://github.com/n2jsoft/liquibase-linter
+# See documentation at: https://github.com/n2jsoft-public-org/liquibase-linter
 
 `
 	data = append([]byte(header), data...)

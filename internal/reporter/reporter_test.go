@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/n2jsoft/liquibase-linter/internal/rules"
+	"github.com/n2jsoft-public-org/liquibase-linter/internal/rules"
 )
 
 func TestGetReporter(t *testing.T) {

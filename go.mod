@@ -1,4 +1,4 @@
-module github.com/n2jsoft/liquibase-linter
+module github.com/n2jsoft-public-org/liquibase-linter
 
 go 1.25.6
 
