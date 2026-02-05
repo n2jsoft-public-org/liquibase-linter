@@ -1,0 +1,57 @@
+databaseChangeLog:
+  - changeSet:
+      id: 1
+      author: john
+      comment: "liquibase-linter:disable sql-injection"
+      changes:
+        - sql:
+            sql: |
+              CREATE TABLE users (
+                id INT PRIMARY KEY,
+                name VARCHAR(100)
+              );
+              INSERT INTO users VALUES (1, ${username});
+
+  - changeSet:
+      id: 2
+      author: jane
+      comment: "liquibase-linter:disable sql-injection,missing-rollback"
+      changes:
+        - sql:
+            sql: "UPDATE users SET name = CONCAT('user_', ${newname});"
+
+  - changeSet:
+      id: 3
+      author: bob
+      comment: "Regular comment without suppression"
+      changes:
+        - sql:
+            sql: "DELETE FROM users WHERE name = ${oldname};"
+
+  - changeSet:
+      id: 4
+      author: alice
+      comment: "LIQUIBASE-LINTER:DISABLE SQL-INJECTION"
+      changes:
+        - sql:
+            sql: "SELECT * FROM users WHERE id = ${id};"
+
+  - changeSet:
+      id: 5
+      author: charlie
+      comment: "Test account. liquibase-linter:disable hardcoded-credentials for development"
+      changes:
+        - sql:
+            sql: "CREATE USER 'dev'@'localhost' IDENTIFIED BY 'devpass';"
+
+  - changeSet:
+      id: 6
+      author: dave
+      comment: "liquibase-linter:disable nonexistent-rule"
+      changes:
+        - createTable:
+            tableName: dummy
+            columns:
+              - column:
+                  name: id
+                  type: INT

@@ -352,7 +352,7 @@ Better yet, manage users outside of Liquibase using proper secret management too
 </changeSet>
 ```
 
-**Linter output**: `[INFO] changelog-organization: Duplicate changeset ID`
+**Linter output**: `[CRITICAL] unique-changeset: Duplicate changeset found: id='1' author='developer' in file 'changelog.xml'`
 
 ✅ **Good**: Unique, sequential IDs with meaningful author
 

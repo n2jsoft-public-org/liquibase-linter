@@ -5,6 +5,7 @@ package parser
 import (
 	"fmt"
 	"path/filepath"
+	"regexp"
 	"strings"
 )
 
@@ -138,6 +139,7 @@ type ChangeSet struct {
 	Changes         []Change
 	Labels          []string
 	DBMSList        []string
+	SuppressedRules []string // Rules disabled via inline comments (e.g., liquibase-linter:disable rule-id)
 	RunAlways       bool
 	RunOnChange     bool
 	FailOnError     bool
@@ -229,6 +231,23 @@ func (cs *ChangeSet) HasPreconditions() bool {
 	return cs.Preconditions != nil
 }
 
+// IsSuppressed checks if a specific rule is suppressed for this changeset.
+func (cs *ChangeSet) IsSuppressed(ruleID string) bool {
+	if len(cs.SuppressedRules) == 0 {
+		return false
+	}
+
+	// Normalize rule ID for comparison (case-insensitive)
+	normalizedRuleID := strings.ToLower(strings.TrimSpace(ruleID))
+
+	for _, suppressedRule := range cs.SuppressedRules {
+		if strings.ToLower(strings.TrimSpace(suppressedRule)) == normalizedRuleID {
+			return true
+		}
+	}
+	return false
+}
+
 // GetChangeType returns a human-readable description of the change type.
 func (c *Change) GetChangeType() string {
 	if c.Type != "" {
@@ -313,6 +332,45 @@ func (c *Change) IsDDLChange() bool {
 	}
 
 	return false
+}
+
+// ParseSuppressions extracts rule IDs from a comment containing suppression directives.
+// Supported formats:
+//   - "liquibase-linter:disable rule-id"
+//   - "liquibase-linter:disable rule-id1,rule-id2"
+//   - "liquibase-linter:disable rule-id1, rule-id2"
+//
+// The directive is case-insensitive, and rule IDs are trimmed of whitespace.
+func ParseSuppressions(comment string) []string {
+	if comment == "" {
+		return nil
+	}
+
+	// Pattern to match: liquibase-linter:disable <rule-id-list>
+	// Case-insensitive, allows whitespace around colon and after disable
+	// Captures only valid rule IDs (word chars and hyphens) separated by commas
+	// Stops at first whitespace after rule list (doesn't capture trailing text)
+	pattern := regexp.MustCompile(`(?i)liquibase-linter\s*:\s*disable\s+([\w-]+(?:\s*,\s*[\w-]+)*)`)
+
+	matches := pattern.FindStringSubmatch(comment)
+	if len(matches) < 2 {
+		return nil
+	}
+
+	// Extract and split rule IDs by comma
+	ruleList := matches[1]
+	ruleIDs := strings.Split(ruleList, ",")
+
+	// Trim whitespace and normalize
+	var result []string
+	for _, ruleID := range ruleIDs {
+		trimmed := strings.TrimSpace(ruleID)
+		if trimmed != "" {
+			result = append(result, trimmed)
+		}
+	}
+
+	return result
 }
 
 // IsDMLChange checks if a change is a Data Manipulation Language (DML) operation.

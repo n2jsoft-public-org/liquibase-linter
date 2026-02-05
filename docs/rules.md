@@ -36,11 +36,11 @@ This document provides an overview of all available linting rules in the Liquiba
 
 ## Best Practices Rules
 
-| Rule                                                      | Severity | Description                                    |
-| --------------------------------------------------------- | -------- | ---------------------------------------------- |
-| [naming-conventions](rules/naming-conventions.md)         | Info     | Enforces consistent naming conventions         |
-| [changelog-organization](rules/changelog-organization.md) | Info     | Ensures proper organization of changelog files |
-| [documentation](rules/documentation.md)                   | Info     | Ensures changesets are properly documented     |
+| Rule                                              | Severity | Description                                |
+| ------------------------------------------------- | -------- | ------------------------------------------ |
+| [naming-conventions](rules/naming-conventions.md) | Info     | Enforces consistent naming conventions     |
+| [unique-changeset](rules/unique-changeset.md)     | Critical | Detects duplicate changesets               |
+| [documentation](rules/documentation.md)           | Info     | Ensures changesets are properly documented |
 
 ## File Structure Rules
 

@@ -168,6 +168,7 @@ Examples:
 	registry.Register(&rules.ContextMisuseRule{})
 	registry.Register(rules.NewRedundantOnErrorHaltRule())
 	registry.Register(rules.NewNoIfExistsRule())
+	registry.Register(&rules.UniqueChangesetRule{})
 
 	// Register label pattern rule (only if enabled in config)
 	if cfg.LabelPattern.Enabled {
@@ -241,8 +242,19 @@ Examples:
 			totalFilesProcessed[normalizedIncluded] = true
 		}
 
+		// Validate suppression directives and print warnings
+		suppressionWarnings := rules.ValidateSuppressions(changelog, registry)
+		for _, warning := range suppressionWarnings {
+			fmt.Fprintf(os.Stderr, "Warning: %s (changeset %s:%s in %s)\n",
+				warning.Message, warning.Author, warning.ChangeSetID, warning.FilePath)
+		}
+
 		// Check with rules
 		violations := registry.CheckChangelog(changelog)
+
+		// Filter out suppressed violations
+		violations = rules.FilterSuppressedViolations(violations, changelog)
+
 		allViolations = append(allViolations, violations...)
 	}
 
@@ -480,11 +492,17 @@ func shouldIgnore(file, basePath string, ignorePatterns []string) bool {
 
 // applyRuleConfig enables/disables rules based on configuration
 func applyRuleConfig(registry *rules.RuleRegistry, cfg *config.Config) {
-	// Disable all rules first if we have config
-	if len(cfg.Rules) > 0 {
-		for ruleID := range cfg.Rules {
-			if !cfg.Rules[ruleID].Enabled {
-				registry.Disable(ruleID)
+	// Apply rule configurations
+	for ruleID, ruleCfg := range cfg.Rules {
+		// Disable rule if not enabled
+		if !ruleCfg.Enabled {
+			registry.Disable(ruleID)
+		}
+
+		// Apply severity override if configured
+		if ruleCfg.Severity != "" {
+			if severity, err := rules.ParseSeverity(ruleCfg.Severity); err == nil {
+				registry.SetSeverity(ruleID, severity)
 			}
 		}
 	}

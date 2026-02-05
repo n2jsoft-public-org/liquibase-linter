@@ -8,6 +8,7 @@ This guide provides detailed information on using the Liquibase Linter effective
 - [Basic Usage](#basic-usage)
 - [Command Reference](#command-reference)
 - [Output Formats](#output-formats)
+- [Suppressing Rules](#suppressing-rules)
 - [Working with Results](#working-with-results)
 - [Best Practices](#best-practices)
 
@@ -285,6 +286,88 @@ XML format for CI/CD systems:
   </testcase>
 </testsuite>
 ```
+
+## Suppressing Rules
+
+Sometimes you need to intentionally violate a linting rule for legitimate reasons. The linter supports inline comment-based suppression to disable specific rules for individual changesets.
+
+### Quick Example
+
+Add a suppression directive to your changeset's comment:
+
+```xml
+<changeSet id="1" author="john">
+    <comment>liquibase-linter:disable sql-injection</comment>
+    <sql>
+        -- Known safe parameter from validated config
+        INSERT INTO settings VALUES (${config_value});
+    </sql>
+</changeSet>
+```
+
+### Syntax
+
+```
+liquibase-linter:disable <rule-id>[,<rule-id>,...]
+```
+
+**Key Points:**
+- Directive is case-insensitive: `liquibase-linter:disable` or `LIQUIBASE-LINTER:DISABLE`
+- Rule IDs are case-sensitive: use exact rule ID (e.g., `sql-injection` not `SQL-INJECTION`)
+- Multiple rules: separate with commas (spaces optional)
+- Additional text: can appear before or after the directive in the comment
+
+### Format Examples
+
+**SQL:**
+```sql
+--changeset john:1
+--comment: liquibase-linter:disable sql-injection,missing-rollback
+INSERT INTO users VALUES (1, ${username});
+```
+
+**YAML:**
+```yaml
+- changeSet:
+    id: 1
+    author: john
+    comment: "liquibase-linter:disable hardcoded-credentials"
+```
+
+**JSON:**
+```json
+{
+  "changeSet": {
+    "id": "1",
+    "comment": "liquibase-linter:disable sql-injection"
+  }
+}
+```
+
+### Invalid Rule Warnings
+
+If you reference an invalid rule ID, the linter will print a warning to stderr:
+
+```
+Warning: Unknown rule 'invalid-rule' in suppression directive (changeset john:1 in db/changelog.xml)
+```
+
+This helps catch typos and outdated rule IDs. The linter will continue execution - invalid suppressions are non-blocking.
+
+### Best Practices
+
+✅ **DO:**
+- Be specific - only suppress the necessary rule
+- Add explanations for why a rule is suppressed
+- Review suppressions in code reviews
+- Use correct case for rule IDs
+
+❌ **DON'T:**
+- Suppress multiple unrelated rules
+- Use suppressions to hide real problems
+- Forget to remove temporary suppressions
+
+For complete documentation including use cases, troubleshooting, and integration examples, see the [Suppression Guide](suppression.md).
 
 ## Working with Results
 

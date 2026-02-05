@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.0.xsd">
+
+    <!-- First changeset - OK -->
+    <changeSet id="001" author="developer">
+        <createTable tableName="users">
+            <column name="id" type="INT">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="username" type="VARCHAR(50)"/>
+            <column name="email" type="VARCHAR(100)"/>
+        </createTable>
+    </changeSet>
+
+    <!-- Second changeset - OK -->
+    <changeSet id="002" author="developer">
+        <createTable tableName="orders">
+            <column name="id" type="INT">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="user_id" type="INT"/>
+            <column name="total" type="DECIMAL(10,2)"/>
+        </createTable>
+    </changeSet>
+
+    <!-- VIOLATION: Duplicate of changeset 001 -->
+    <changeSet id="001" author="developer">
+        <createTable tableName="products">
+            <column name="id" type="INT">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="name" type="VARCHAR(100)"/>
+        </createTable>
+    </changeSet>
+
+    <!-- Third changeset - OK -->
+    <changeSet id="003" author="developer">
+        <addColumn tableName="users">
+            <column name="created_at" type="TIMESTAMP"/>
+        </addColumn>
+    </changeSet>
+
+    <!-- Same ID but different author - OK -->
+    <changeSet id="001" author="another-dev">
+        <createTable tableName="categories">
+            <column name="id" type="INT">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="name" type="VARCHAR(50)"/>
+        </createTable>
+    </changeSet>
+
+    <!-- VIOLATION: Another duplicate of changeset 002 -->
+    <changeSet id="002" author="developer">
+        <createTable tableName="inventory">
+            <column name="id" type="INT"/>
+            <column name="product_id" type="INT"/>
+        </createTable>
+    </changeSet>
+
+</databaseChangeLog>

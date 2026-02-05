@@ -18,8 +18,8 @@ var (
 	rollbackRegex = regexp.MustCompile(`^--\s*rollback\s+(.*)$`)
 	// Matches precondition marker like: --preconditions onFail:MARK_RAN
 	preconditionsRegex = regexp.MustCompile(`^--\s*preconditions?\s+(.*)$`)
-	// Matches comment lines
-	commentRegex = regexp.MustCompile(`^--\s*comment\s+(.*)$`)
+	// Matches comment lines (both --comment text and --comment: text)
+	commentRegex = regexp.MustCompile(`^--\s*comment:?\s*(.*)$`)
 	// Matches label marker like: --labels: label1, label2
 	labelsRegex = regexp.MustCompile(`^--\s*labels?:\s*(.*)$`)
 	// Matches context marker like: --context: dev, test
@@ -106,6 +106,8 @@ func (p *SQLParser) Parse(filePath string) (*Changelog, error) {
 		// Check for comment
 		if matches := commentRegex.FindStringSubmatch(line); matches != nil {
 			currentChangeSet.Comment = strings.TrimSpace(matches[1])
+			// Parse suppression directives from comment
+			currentChangeSet.SuppressedRules = ParseSuppressions(currentChangeSet.Comment)
 			continue
 		}
 
