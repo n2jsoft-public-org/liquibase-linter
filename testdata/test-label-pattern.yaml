@@ -1,0 +1,11 @@
+label_pattern:
+  enabled: true
+  severity: warning
+  pattern: '^v\d+$'
+  require_label: true
+  exclude_patterns:
+    - "**/init/**"
+
+output:
+  format: text
+  colorize: true

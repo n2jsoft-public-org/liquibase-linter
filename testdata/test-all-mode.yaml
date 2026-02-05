@@ -1,0 +1,12 @@
+rules:
+  non-idempotent:
+    enabled: true
+    severity: warning
+    mode: all
+    exclude_patterns:
+      - "**/init/**"
+      - "**/seed/**"
+
+output:
+  format: text
+  colorize: true

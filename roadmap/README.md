@@ -16,7 +16,7 @@ Enhance the existing `non-idempotent` rule with configurable modes (`risky-only`
 
 ### 2. Label Pattern
 **File**: [label-pattern.md](label-pattern.md)  
-**Status**: 📋 Planned  
+**Status**: ✅ Implemented  
 **Priority**: High  
 **Effort**: 3-4 hours
 
