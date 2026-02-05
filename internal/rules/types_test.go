@@ -3,7 +3,7 @@ package rules
 import (
 	"testing"
 
-	"github.com/n2jsoft/liquibase-linter/internal/parser"
+	"github.com/n2jsoft-public-org/liquibase-linter/internal/parser"
 )
 
 func TestRuleRegistry_Register(t *testing.T) {
@@ -86,13 +86,13 @@ func TestRuleRegistry_CheckChangelog(t *testing.T) {
 
 func TestSeverity_String(t *testing.T) {
 	tests := []struct {
-		severity Severity
 		want     string
+		severity Severity
 	}{
-		{SeverityInfo, "info"},
-		{SeverityWarning, "warning"},
-		{SeverityCritical, "critical"},
-		{Severity(99), "unknown"},
+		{want: "info", severity: SeverityInfo},
+		{want: "warning", severity: SeverityWarning},
+		{want: "critical", severity: SeverityCritical},
+		{want: "unknown", severity: Severity(99)},
 	}
 
 	for _, tt := range tests {

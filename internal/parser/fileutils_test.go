@@ -90,8 +90,8 @@ func TestGetFileDir(t *testing.T) {
 func TestJoinPath(t *testing.T) {
 	tests := []struct {
 		name     string
-		elements []string
 		expected string
+		elements []string
 	}{
 		{
 			name:     "two elements",

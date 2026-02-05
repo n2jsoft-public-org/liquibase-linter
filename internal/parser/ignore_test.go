@@ -13,72 +13,72 @@ func TestParseContext_ShouldIgnore(t *testing.T) {
 
 	tests := []struct {
 		name           string
-		ignorePatterns []string
 		basePath       string
 		filePath       string
+		ignorePatterns []string
 		shouldIgnore   bool
 	}{
 		{
 			name:           "ignore init directory",
 			ignorePatterns: []string{"changelog/init/**"},
 			basePath:       tmpDir,
-			filePath:       filepath.Join(tmpDir, "changelog/init/structure/tables.sql"),
+			filePath:       filepath.Join(tmpDir, "changelog", "init", "structure", "tables.sql"),
 			shouldIgnore:   true,
 		},
 		{
 			name:           "ignore init directory with wildcard",
 			ignorePatterns: []string{"changelog/init/**"},
 			basePath:       tmpDir,
-			filePath:       filepath.Join(tmpDir, "changelog/init/data/inserts.sql"),
+			filePath:       filepath.Join(tmpDir, "changelog", "init", "data", "inserts.sql"),
 			shouldIgnore:   true,
 		},
 		{
 			name:           "don't ignore sprint directory",
 			ignorePatterns: []string{"changelog/init/**"},
 			basePath:       tmpDir,
-			filePath:       filepath.Join(tmpDir, "changelog/sprints/v116/structure.sql"),
+			filePath:       filepath.Join(tmpDir, "changelog", "sprints", "v116", "structure.sql"),
 			shouldIgnore:   false,
 		},
 		{
 			name:           "ignore specific file pattern",
 			ignorePatterns: []string{"**/*.bak"},
 			basePath:       tmpDir,
-			filePath:       filepath.Join(tmpDir, "changelog/backup.bak"),
+			filePath:       filepath.Join(tmpDir, "changelog", "backup.bak"),
 			shouldIgnore:   true,
 		},
 		{
 			name:           "don't ignore when pattern doesn't match",
 			ignorePatterns: []string{"**/*.bak"},
 			basePath:       tmpDir,
-			filePath:       filepath.Join(tmpDir, "changelog/main.sql"),
+			filePath:       filepath.Join(tmpDir, "changelog", "main.sql"),
 			shouldIgnore:   false,
 		},
 		{
 			name:           "empty ignore patterns",
 			ignorePatterns: []string{},
 			basePath:       tmpDir,
-			filePath:       filepath.Join(tmpDir, "changelog/init/tables.sql"),
+			filePath:       filepath.Join(tmpDir, "changelog", "init", "tables.sql"),
 			shouldIgnore:   false,
 		},
 		{
 			name:           "multiple patterns - first matches",
 			ignorePatterns: []string{"changelog/init/**", "changelog/test/**"},
 			basePath:       tmpDir,
-			filePath:       filepath.Join(tmpDir, "changelog/init/tables.sql"),
+			filePath:       filepath.Join(tmpDir, "changelog", "init", "tables.sql"),
 			shouldIgnore:   true,
 		},
 		{
 			name:           "multiple patterns - second matches",
 			ignorePatterns: []string{"changelog/init/**", "changelog/test/**"},
 			basePath:       tmpDir,
-			filePath:       filepath.Join(tmpDir, "changelog/test/fixtures.sql"),
+			filePath:       filepath.Join(tmpDir, "changelog", "test", "fixtures.sql"),
 			shouldIgnore:   true,
 		},
 		{
 			name:           "multiple patterns - none match",
 			ignorePatterns: []string{"changelog/init/**", "changelog/test/**"},
 			basePath:       tmpDir,
-			filePath:       filepath.Join(tmpDir, "changelog/sprints/v116/main.sql"),
+			filePath:       filepath.Join(tmpDir, "changelog", "sprints", "v116", "main.sql"),
 			shouldIgnore:   false,
 		},
 	}
@@ -106,10 +106,12 @@ func TestYAMLParser_IncludeAllWithIgnore(t *testing.T) {
 	initDir := filepath.Join(tmpDir, "changelog", "init")
 	sprintDir := filepath.Join(tmpDir, "changelog", "sprints", "v116")
 
-	if err := os.MkdirAll(initDir, 0755); err != nil {
+	//nolint:gosec // G301: Test directory, permissions are acceptable
+	if err := os.MkdirAll(initDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.MkdirAll(sprintDir, 0755); err != nil {
+	//nolint:gosec // G301: Test directory, permissions are acceptable
+	if err := os.MkdirAll(sprintDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
 
@@ -126,10 +128,12 @@ CREATE TABLE test (id INT);
 CREATE TABLE sprint (id INT);
 `
 
-	if err := os.WriteFile(initSQL, []byte(initContent), 0644); err != nil {
+	//nolint:gosec // G306: Test file, permissions are acceptable
+	if err := os.WriteFile(initSQL, []byte(initContent), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(sprintSQL, []byte(sprintContent), 0644); err != nil {
+	//nolint:gosec // G306: Test file, permissions are acceptable
+	if err := os.WriteFile(sprintSQL, []byte(sprintContent), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -139,7 +143,8 @@ CREATE TABLE sprint (id INT);
   - includeAll:
       path: changelog
 `
-	if err := os.WriteFile(masterPath, []byte(masterContent), 0644); err != nil {
+	//nolint:gosec // G306: Test file, permissions are acceptable
+	if err := os.WriteFile(masterPath, []byte(masterContent), 0o644); err != nil {
 		t.Fatal(err)
 	}
 

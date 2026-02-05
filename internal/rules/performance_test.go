@@ -3,15 +3,15 @@ package rules
 import (
 	"testing"
 
-	"github.com/n2jsoft/liquibase-linter/internal/parser"
+	"github.com/n2jsoft-public-org/liquibase-linter/internal/parser"
 )
 
 func TestMissingIndexRule_Check(t *testing.T) {
 	rule := &MissingIndexRule{}
 
 	tests := []struct {
-		name           string
 		changelog      *parser.Changelog
+		name           string
 		wantViolations int
 	}{
 		{
@@ -63,8 +63,8 @@ func TestTableLockRule_Check(t *testing.T) {
 	rule := &TableLockRule{}
 
 	tests := []struct {
-		name           string
 		changelog      *parser.Changelog
+		name           string
 		wantViolations int
 	}{
 		{
@@ -134,8 +134,8 @@ func TestLargeDataOperationRule_Check(t *testing.T) {
 	rule := &LargeDataOperationRule{}
 
 	tests := []struct {
-		name           string
 		changelog      *parser.Changelog
+		name           string
 		wantViolations int
 	}{
 		{
@@ -202,8 +202,8 @@ func TestSelectStarRule_Check(t *testing.T) {
 	rule := &SelectStarRule{}
 
 	tests := []struct {
-		name           string
 		changelog      *parser.Changelog
+		name           string
 		wantViolations int
 	}{
 		{

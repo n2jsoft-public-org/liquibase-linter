@@ -5,7 +5,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/n2jsoft/liquibase-linter/internal/parser"
+	"github.com/n2jsoft-public-org/liquibase-linter/internal/parser"
 )
 
 // SQLInjectionRule detects potential SQL injection vulnerabilities.
@@ -37,51 +37,53 @@ func (r *SQLInjectionRule) Check(changelog *parser.Changelog) []Violation {
 
 	// Patterns that indicate potential SQL injection
 	injectionPatterns := []*regexp.Regexp{
-		regexp.MustCompile(`\$\{[^}]+\}`),             // Variable interpolation: ${var}
-		regexp.MustCompile(`\+\s*['"]|['"]\s*\+`),     // String concatenation with quotes
-		regexp.MustCompile(`CONCAT\s*\(`),             // CONCAT function usage
-		regexp.MustCompile(`\|\|\s*['"]|['"]\s*\|\|`), // String concatenation with ||
+		regexp.MustCompile(`\$\{[^}]+\}`),              // Variable interpolation: ${var}
+		regexp.MustCompile(`\+\s*['"]|['"]\s*\+`),      // String concatenation with quotes
+		regexp.MustCompile(`CONCAT\s*\(`),              // CONCAT function usage
+		regexp.MustCompile(`\|\|\s*['"r]|['"]\s*\|\|`), // String concatenation with ||
 	}
 
-	for _, cs := range changelog.ChangeSets {
+	for i := range changelog.ChangeSets {
+		cs := &changelog.ChangeSets[i]
 		for _, change := range cs.Changes {
 			sql := change.SQL
 
 			// Check all SQL patterns
 			for _, pattern := range injectionPatterns {
-				if pattern.MatchString(sql) {
-					// Find the line containing the pattern
-					lines := strings.Split(sql, "\n")
-					sqlSnippet := ""
-					lineNum := 0
-					for i, line := range lines {
-						if pattern.MatchString(line) {
-							sqlSnippet = strings.TrimSpace(line)
-							lineNum = i + 1
-							break
-						}
-					}
-					// Fallback to first line if no specific line found
-					if sqlSnippet == "" && len(lines) > 0 {
-						sqlSnippet = strings.TrimSpace(lines[0])
-						lineNum = 1
-					}
-					if len(sqlSnippet) > 100 {
-						sqlSnippet = sqlSnippet[:100] + "..."
-					}
-
-					violations = append(violations, Violation{
-						Rule:        r.ID(),
-						Severity:    r.Severity(),
-						Message:     "Potential SQL injection: SQL statement contains string concatenation or variable interpolation",
-						FilePath:    cs.FilePath,
-						LineNumber:  lineNum,
-						Line:        sqlSnippet,
-						ChangeSetID: cs.ID,
-						Author:      cs.Author,
-					})
-					break // Only report once per change
+				if !pattern.MatchString(sql) {
+					continue
 				}
+				// Find the line containing the pattern
+				lines := strings.Split(sql, "\n")
+				sqlSnippet := ""
+				lineNum := 0
+				for i, line := range lines {
+					if pattern.MatchString(line) {
+						sqlSnippet = strings.TrimSpace(line)
+						lineNum = i + 1
+						break
+					}
+				}
+				// Fallback to first line if no specific line found
+				if sqlSnippet == "" && len(lines) > 0 {
+					sqlSnippet = strings.TrimSpace(lines[0])
+					lineNum = 1
+				}
+				if len(sqlSnippet) > 100 {
+					sqlSnippet = sqlSnippet[:100] + "..."
+				}
+
+				violations = append(violations, Violation{
+					Rule:        r.ID(),
+					Severity:    r.Severity(),
+					Message:     "Potential SQL injection: SQL statement contains string concatenation or variable interpolation",
+					FilePath:    cs.FilePath,
+					LineNumber:  lineNum,
+					Line:        sqlSnippet,
+					ChangeSetID: cs.ID,
+					Author:      cs.Author,
+				})
+				break // Only report once per change
 			}
 		}
 	}
@@ -126,39 +128,42 @@ func (r *HardcodedCredentialsRule) Check(changelog *parser.Changelog) []Violatio
 		regexp.MustCompile(`(?i)IDENTIFIED\s+BY\s+['"][^'"]+['"]`),
 	}
 
-	for _, cs := range changelog.ChangeSets {
+	for i := range changelog.ChangeSets {
+		cs := &changelog.ChangeSets[i]
 		for _, change := range cs.Changes {
 			sql := change.SQL
 
 			for _, pattern := range credentialPatterns {
-				if match := pattern.FindString(sql); match != "" {
-					// Extract the line containing the credential
-					lines := strings.Split(sql, "\n")
-					sqlSnippet := ""
-					lineNum := 0
-					for i, line := range lines {
-						if strings.Contains(line, match) {
-							sqlSnippet = strings.TrimSpace(line)
-							lineNum = i + 1
-							if len(sqlSnippet) > 100 {
-								sqlSnippet = sqlSnippet[:100] + "..."
-							}
-							break
-						}
-					}
-
-					violations = append(violations, Violation{
-						Rule:        r.ID(),
-						Severity:    r.Severity(),
-						Message:     "Hardcoded credentials detected in SQL statement",
-						FilePath:    cs.FilePath,
-						LineNumber:  lineNum,
-						Line:        sqlSnippet,
-						ChangeSetID: cs.ID,
-						Author:      cs.Author,
-					})
-					break
+				if match := pattern.FindString(sql); match == "" {
+					continue
 				}
+				match := pattern.FindString(sql)
+				// Extract the line containing the credential
+				lines := strings.Split(sql, "\n")
+				sqlSnippet := ""
+				lineNum := 0
+				for i, line := range lines {
+					if strings.Contains(line, match) {
+						sqlSnippet = strings.TrimSpace(line)
+						lineNum = i + 1
+						if len(sqlSnippet) > 100 {
+							sqlSnippet = sqlSnippet[:100] + "..."
+						}
+						break
+					}
+				}
+
+				violations = append(violations, Violation{
+					Rule:        r.ID(),
+					Severity:    r.Severity(),
+					Message:     "Hardcoded credentials detected in SQL statement",
+					FilePath:    cs.FilePath,
+					LineNumber:  lineNum,
+					Line:        sqlSnippet,
+					ChangeSetID: cs.ID,
+					Author:      cs.Author,
+				})
+				break
 			}
 		}
 	}
@@ -195,7 +200,8 @@ func (r *DangerousOperationsRule) Check(changelog *parser.Changelog) []Violation
 
 	dangerousOps := []string{"DROP TABLE", "DROP DATABASE", "TRUNCATE", "DELETE FROM"}
 
-	for _, cs := range changelog.ChangeSets {
+	for i := range changelog.ChangeSets {
+		cs := &changelog.ChangeSets[i]
 		// Check if changeset has preconditions or context
 		hasSafeguards := cs.HasPreconditions() || cs.Context != ""
 
@@ -289,39 +295,42 @@ func (r *PrivilegeEscalationRule) Check(changelog *parser.Changelog) []Violation
 		regexp.MustCompile(`(?i)@['"]%['"]`), // Wildcard host
 	}
 
-	for _, cs := range changelog.ChangeSets {
+	for i := range changelog.ChangeSets {
+		cs := &changelog.ChangeSets[i]
 		for _, change := range cs.Changes {
 			sql := change.SQL
 
 			for _, pattern := range privilegePatterns {
-				if match := pattern.FindString(sql); match != "" {
-					// Extract the line containing the privilege grant
-					lines := strings.Split(sql, "\n")
-					sqlSnippet := ""
-					lineNum := 0
-					for i, line := range lines {
-						if strings.Contains(strings.ToUpper(line), strings.ToUpper(match)) {
-							sqlSnippet = strings.TrimSpace(line)
-							lineNum = i + 1
-							if len(sqlSnippet) > 100 {
-								sqlSnippet = sqlSnippet[:100] + "..."
-							}
-							break
-						}
-					}
-
-					violations = append(violations, Violation{
-						Rule:        r.ID(),
-						Severity:    r.Severity(),
-						Message:     "Excessive privilege grant detected",
-						FilePath:    cs.FilePath,
-						LineNumber:  lineNum,
-						Line:        sqlSnippet,
-						ChangeSetID: cs.ID,
-						Author:      cs.Author,
-					})
-					break
+				if match := pattern.FindString(sql); match == "" {
+					continue
 				}
+				match := pattern.FindString(sql)
+				// Extract the line containing the privilege grant
+				lines := strings.Split(sql, "\n")
+				sqlSnippet := ""
+				lineNum := 0
+				for i, line := range lines {
+					if strings.Contains(strings.ToUpper(line), strings.ToUpper(match)) {
+						sqlSnippet = strings.TrimSpace(line)
+						lineNum = i + 1
+						if len(sqlSnippet) > 100 {
+							sqlSnippet = sqlSnippet[:100] + "..."
+						}
+						break
+					}
+				}
+
+				violations = append(violations, Violation{
+					Rule:        r.ID(),
+					Severity:    r.Severity(),
+					Message:     "Excessive privilege grant detected",
+					FilePath:    cs.FilePath,
+					LineNumber:  lineNum,
+					Line:        sqlSnippet,
+					ChangeSetID: cs.ID,
+					Author:      cs.Author,
+				})
+				break
 			}
 		}
 	}

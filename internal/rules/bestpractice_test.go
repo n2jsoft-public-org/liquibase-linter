@@ -3,16 +3,16 @@ package rules
 import (
 	"testing"
 
-	"github.com/n2jsoft/liquibase-linter/internal/config"
-	"github.com/n2jsoft/liquibase-linter/internal/parser"
+	"github.com/n2jsoft-public-org/liquibase-linter/internal/config"
+	"github.com/n2jsoft-public-org/liquibase-linter/internal/parser"
 )
 
 func TestMissingRollbackRule_Check(t *testing.T) {
 	rule := &MissingRollbackRule{}
 
 	tests := []struct {
-		name           string
 		changelog      *parser.Changelog
+		name           string
 		wantViolations int
 	}{
 		{
@@ -62,11 +62,11 @@ func TestMissingRollbackRule_Check(t *testing.T) {
 
 func TestNonIdempotentChangesRule_Check(t *testing.T) {
 	tests := []struct {
-		name           string
-		config         config.RuleConfig
 		changelog      *parser.Changelog
-		wantViolations int
+		name           string
 		wantMessage    string
+		config         config.RuleConfig
+		wantViolations int
 	}{
 		{
 			name: "risky-only mode: createTable with preconditions - no violation",
@@ -380,8 +380,8 @@ func TestNamingConventionRule_Check(t *testing.T) {
 	rule := &NamingConventionRule{}
 
 	tests := []struct {
-		name           string
 		changelog      *parser.Changelog
+		name           string
 		wantViolations int
 	}{
 		{
@@ -448,8 +448,8 @@ func TestChangesetDocumentationRule_Check(t *testing.T) {
 	rule := &ChangesetDocumentationRule{}
 
 	tests := []struct {
-		name           string
 		changelog      *parser.Changelog
+		name           string
 		wantViolations int
 	}{
 		{
@@ -496,8 +496,8 @@ func TestContextMisuseRule_Check(t *testing.T) {
 	rule := &ContextMisuseRule{}
 
 	tests := []struct {
-		name           string
 		changelog      *parser.Changelog
+		name           string
 		wantViolations int
 	}{
 		{
@@ -575,8 +575,8 @@ func TestSprintFolderStructureRule_Check(t *testing.T) {
 	rule := NewSprintFolderStructureRule(cfg)
 
 	tests := []struct {
-		name           string
 		changelog      *parser.Changelog
+		name           string
 		wantViolations int
 	}{
 		{
@@ -670,8 +670,8 @@ func TestDDLLocationRule_Check(t *testing.T) {
 	rule := NewDDLLocationRule(cfg)
 
 	tests := []struct {
-		name           string
 		changelog      *parser.Changelog
+		name           string
 		wantViolations int
 	}{
 		{
@@ -780,8 +780,8 @@ func TestDMLLocationRule_Check(t *testing.T) {
 	rule := NewDMLLocationRule(cfg)
 
 	tests := []struct {
-		name           string
 		changelog      *parser.Changelog
+		name           string
 		wantViolations int
 	}{
 		{

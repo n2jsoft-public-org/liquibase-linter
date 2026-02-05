@@ -4,15 +4,15 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/n2jsoft/liquibase-linter/internal/config"
-	"github.com/n2jsoft/liquibase-linter/internal/parser"
+	"github.com/n2jsoft-public-org/liquibase-linter/internal/config"
+	"github.com/n2jsoft-public-org/liquibase-linter/internal/parser"
 )
 
 func TestAtomicChangesetRule_Check(t *testing.T) {
 	tests := []struct {
-		name           string
 		changelog      *parser.Changelog
 		config         *config.AtomicChangesetConfig
+		name           string
 		wantViolations int
 	}{
 		{
@@ -403,9 +403,9 @@ func TestAtomicChangesetRule_PreprocessSQL(t *testing.T) {
 	rule := NewAtomicChangesetRule(&config.AtomicChangesetConfig{Enabled: true})
 
 	tests := []struct {
+		check func(string) bool
 		name  string
 		input string
-		check func(string) bool
 	}{
 		{
 			name:  "Remove single-line comment",

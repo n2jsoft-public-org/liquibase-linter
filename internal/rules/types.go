@@ -4,10 +4,11 @@ package rules
 
 import (
 	"bufio"
+	"fmt"
 	"os"
 	"strings"
 
-	"github.com/n2jsoft/liquibase-linter/internal/parser"
+	"github.com/n2jsoft-public-org/liquibase-linter/internal/parser"
 )
 
 // Severity represents the severity level of a rule violation.
@@ -39,13 +40,13 @@ func (s Severity) String() string {
 // Violation represents a single rule violation found in a changelog.
 type Violation struct {
 	Rule        string
-	Severity    Severity
 	Message     string
 	FilePath    string
-	LineNumber  int
 	Line        string // The actual line content that triggered the violation
 	ChangeSetID string
 	Author      string
+	Severity    Severity
+	LineNumber  int
 }
 
 // Rule is the interface that all linting rules must implement.
@@ -140,12 +141,17 @@ func ReadLineFromFile(filePath string, lineNumber int) string {
 	if lineNumber <= 0 {
 		return ""
 	}
-
+	//nolint:gosec // G304: File path is provided by user for linting
 	file, err := os.Open(filePath)
 	if err != nil {
 		return ""
 	}
-	defer file.Close()
+	defer func() {
+		if closeErr := file.Close(); closeErr != nil {
+			// Log but don't fail - this is a best effort to read
+			fmt.Fprintf(os.Stderr, "warning: failed to close file: %v\n", closeErr)
+		}
+	}()
 
 	scanner := bufio.NewScanner(file)
 	currentLine := 0

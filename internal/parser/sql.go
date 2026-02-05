@@ -13,7 +13,7 @@ type SQLParser struct{}
 
 var (
 	// Matches Liquibase SQL changeset headers like: --changeset author:id
-	changesetRegex = regexp.MustCompile(`^--\s*changeset\s+([^:]+):([^\s]+)(.*)$`)
+	changesetRegex = regexp.MustCompile(`^--\s*changeset\s+([^:]+):(\S+)(.*)$`)
 	// Matches rollback marker like: --rollback SQL statement
 	rollbackRegex = regexp.MustCompile(`^--\s*rollback\s+(.*)$`)
 	// Matches precondition marker like: --preconditions onFail:MARK_RAN
@@ -32,11 +32,16 @@ var (
 
 // Parse parses a SQL-formatted changelog file.
 func (p *SQLParser) Parse(filePath string) (*Changelog, error) {
+	//nolint:gosec // G304: File path is provided by user for parsing
 	file, err := os.Open(filePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open file: %w", err)
 	}
-	defer file.Close()
+	defer func() {
+		if closeErr := file.Close(); closeErr != nil {
+			fmt.Fprintf(os.Stderr, "warning: failed to close file: %v\n", closeErr)
+		}
+	}()
 
 	changelog := &Changelog{
 		FilePath:      filePath,
@@ -170,11 +175,11 @@ func (p *SQLParser) parseChangeSetAttributes(cs *ChangeSet, attributesStr string
 
 		switch key {
 		case "runalways":
-			cs.RunAlways = strings.ToLower(value) == "true"
+			cs.RunAlways = strings.EqualFold(value, "true")
 		case "runonchange":
-			cs.RunOnChange = strings.ToLower(value) == "true"
+			cs.RunOnChange = strings.EqualFold(value, "true")
 		case "failonerror":
-			cs.FailOnError = strings.ToLower(value) != "false"
+			cs.FailOnError = !strings.EqualFold(value, "false")
 		case "context":
 			cs.Context = value
 		case "labels":

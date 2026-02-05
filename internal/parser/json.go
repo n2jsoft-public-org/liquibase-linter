@@ -20,6 +20,7 @@ func (p *JSONParser) Parse(filePath string) (*Changelog, error) {
 // ParseWithConfig parses a JSON changelog file with ignore patterns for filtering includes.
 func (p *JSONParser) ParseWithConfig(filePath string, ignorePatterns []string, basePath string) (*Changelog, error) {
 	// Read file
+	//nolint:gosec // G304: File path is provided by user for parsing
 	data, err := os.ReadFile(filePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read file: %w", err)
@@ -27,13 +28,16 @@ func (p *JSONParser) ParseWithConfig(filePath string, ignorePatterns []string, b
 
 	// Parse JSON - reuse YAML struct since it has dual tags
 	var doc yamlDatabaseChangeLog
-	if err := json.Unmarshal(data, &doc); err != nil {
-		return nil, fmt.Errorf("failed to parse JSON: %w", err)
+	if unmarshalErr := json.Unmarshal(data, &doc); unmarshalErr != nil {
+		return nil, fmt.Errorf("failed to unmarshal JSON: %w", unmarshalErr)
 	}
 
 	// Create parse context with default config values
 	ctx := newParseContext(10, true)
-	absPath, _ := filepath.Abs(filePath)
+	absPath, err := filepath.Abs(filePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to resolve absolute path: %w", err)
+	}
 	ctx.includeChain = []string{absPath}
 
 	// Set ignore patterns if provided

@@ -90,7 +90,8 @@ output:
 severity_threshold: critical
 `
 
-	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
+	//nolint:gosec // G306: Test configuration file, permissions are acceptable
+	if err := os.WriteFile(configPath, []byte(configContent), 0o644); err != nil {
 		t.Fatalf("Failed to create test config file: %v", err)
 	}
 
@@ -138,7 +139,8 @@ func TestLoad_InvalidYAML(t *testing.T) {
   this is not: valid: yaml::
 `
 
-	if err := os.WriteFile(configPath, []byte(invalidContent), 0644); err != nil {
+	//nolint:gosec // G306: Test configuration file, permissions are acceptable
+	if err := os.WriteFile(configPath, []byte(invalidContent), 0o644); err != nil {
 		t.Fatalf("Failed to create test config file: %v", err)
 	}
 
@@ -183,8 +185,8 @@ func TestValidate_InvalidRuleSeverity(t *testing.T) {
 
 func TestValidate_ValidConfig(t *testing.T) {
 	tests := []struct {
-		name   string
 		config *Config
+		name   string
 	}{
 		{
 			name:   "default config",
@@ -244,18 +246,19 @@ func TestInitConfig(t *testing.T) {
 	}
 
 	// Check file exists
-	if _, err := os.Stat(configPath); os.IsNotExist(err) {
+	if _, statErr := os.Stat(configPath); os.IsNotExist(statErr) {
 		t.Fatal("Configuration file was not created")
 	}
 
 	// Read and verify content
+	//nolint:gosec // G304: Test file reading, path is controlled
 	data, err := os.ReadFile(configPath)
 	if err != nil {
 		t.Fatalf("Failed to read created config file: %v", err)
 	}
 
 	content := string(data)
-	if len(content) == 0 {
+	if content == "" {
 		t.Error("Created config file is empty")
 	}
 
@@ -275,7 +278,8 @@ func TestInitConfig_FileExists(t *testing.T) {
 	configPath := filepath.Join(tmpDir, ".liquibase-linter.yaml")
 
 	// Create file first
-	if err := os.WriteFile(configPath, []byte("test"), 0644); err != nil {
+	//nolint:gosec // G306: Test file, permissions are acceptable
+	if err := os.WriteFile(configPath, []byte("test"), 0o644); err != nil {
 		t.Fatalf("Failed to create test file: %v", err)
 	}
 

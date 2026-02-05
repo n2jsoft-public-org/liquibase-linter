@@ -201,7 +201,7 @@ liquibase-linter init
 
 1. **Follow Effective Go**: https://go.dev/doc/effective_go
 2. **Use `gofmt`**: All code must be formatted with `gofmt`
-3. **Run `golint`**: Code should pass golint checks
+3. **Run `make lint`**: Always run `make lint` after updating code to ensure it passes all linting checks
 4. **Error Handling**: Always check and handle errors explicitly
 5. **Naming Conventions**:
    - Use camelCase for unexported names
@@ -416,12 +416,16 @@ GOOS=windows GOARCH=amd64 go build -o liquibase-linter-windows-amd64.exe ./cmd/l
 
 # Run tests
 go test ./...
+# OR use make
+make test
 
 # Run tests with coverage
 go test -cover ./...
+# OR use make
+make coverage
 
-# Run linters
-golangci-lint run
+# Run linters (ALWAYS run after code changes)
+make lint
 ```
 
 ## CI/CD Integration

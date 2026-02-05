@@ -3,15 +3,15 @@ package rules
 import (
 	"testing"
 
-	"github.com/n2jsoft/liquibase-linter/internal/parser"
+	"github.com/n2jsoft-public-org/liquibase-linter/internal/parser"
 )
 
 func TestNoIfExistsRule_Check(t *testing.T) {
 	rule := NewNoIfExistsRule()
 
 	tests := []struct {
-		name           string
 		changelog      *parser.Changelog
+		name           string
 		wantViolations int
 	}{
 		{

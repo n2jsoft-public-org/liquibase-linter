@@ -3,15 +3,15 @@ package rules
 import (
 	"testing"
 
-	"github.com/n2jsoft/liquibase-linter/internal/parser"
+	"github.com/n2jsoft-public-org/liquibase-linter/internal/parser"
 )
 
 func TestSQLInjectionRule_Check(t *testing.T) {
 	rule := &SQLInjectionRule{}
 
 	tests := []struct {
-		name           string
 		changelog      *parser.Changelog
+		name           string
 		wantViolations int
 	}{
 		{
@@ -81,8 +81,8 @@ func TestHardcodedCredentialsRule_Check(t *testing.T) {
 	rule := &HardcodedCredentialsRule{}
 
 	tests := []struct {
-		name           string
 		changelog      *parser.Changelog
+		name           string
 		wantViolations int
 	}{
 		{
@@ -149,8 +149,8 @@ func TestDangerousOperationsRule_Check(t *testing.T) {
 	rule := &DangerousOperationsRule{}
 
 	tests := []struct {
-		name           string
 		changelog      *parser.Changelog
+		name           string
 		wantViolations int
 	}{
 		{
@@ -239,8 +239,8 @@ func TestPrivilegeEscalationRule_Check(t *testing.T) {
 	rule := &PrivilegeEscalationRule{}
 
 	tests := []struct {
-		name           string
 		changelog      *parser.Changelog
+		name           string
 		wantViolations int
 	}{
 		{

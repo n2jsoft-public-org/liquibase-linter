@@ -3,13 +3,12 @@ package parser
 
 import (
 	"fmt"
-	"strings"
 )
 
 // ConvertChange converts a change from a map[string]any structure to a Change object.
 // This is used by YAML and JSON parsers which unmarshal to dynamic structures.
 // Returns an error with full context (file path, changeset ID, change type, field) on validation failures.
-func ConvertChange(changeType string, data any, filePath string, changesetID string) (Change, error) {
+func ConvertChange(changeType string, data any, filePath, changesetID string) (Change, error) {
 	// Handle nil data
 	if data == nil {
 		return Change{}, fmt.Errorf("%s:changeSet[%s]:%s: change data is nil", filePath, changesetID, changeType)
@@ -68,7 +67,7 @@ func ConvertChange(changeType string, data any, filePath string, changesetID str
 	case "delete":
 		return convertDelete(dataMap, filePath, changesetID)
 	case "sql", "sqlFile":
-		return convertSql(dataMap, filePath, changesetID, changeType)
+		return convertSQL(dataMap, filePath, changesetID, changeType)
 	default:
 		// Unknown change type - create generic change
 		return Change{
@@ -475,8 +474,8 @@ func convertDelete(data map[string]any, filePath, changesetID string) (Change, e
 	}, nil
 }
 
-// convertSql converts a sql or sqlFile change
-func convertSql(data map[string]any, filePath, changesetID, changeType string) (Change, error) {
+// convertSQL converts a sql or sqlFile change
+func convertSQL(data map[string]any, _ /* filePath */, _ /* changesetID */, changeType string) (Change, error) {
 	var sql string
 
 	if changeType == "sql" {
@@ -554,33 +553,4 @@ func flattenMap(data map[string]any) map[string]string {
 		}
 	}
 	return result
-}
-
-// extractTableName attempts to extract a table name from SQL
-func extractTableName(sql string) string {
-	sql = strings.ToUpper(strings.TrimSpace(sql))
-
-	// Simple pattern matching for common SQL statements
-	if strings.HasPrefix(sql, "CREATE TABLE") {
-		parts := strings.Fields(sql)
-		if len(parts) >= 3 {
-			return strings.Trim(parts[2], " \t\n\r();")
-		}
-	}
-
-	if strings.HasPrefix(sql, "DROP TABLE") {
-		parts := strings.Fields(sql)
-		if len(parts) >= 3 {
-			return strings.Trim(parts[2], " \t\n\r();")
-		}
-	}
-
-	if strings.HasPrefix(sql, "ALTER TABLE") {
-		parts := strings.Fields(sql)
-		if len(parts) >= 3 {
-			return strings.Trim(parts[2], " \t\n\r();")
-		}
-	}
-
-	return ""
 }

@@ -24,10 +24,10 @@ Database migrations are critical infrastructure code that often contains securit
 ## Installation
 
 ```bash
-go install github.com/n2jsoft/liquibase-linter/cmd/liquibase-linter@latest
+go install github.com/n2jsoft-public-org/liquibase-linter/cmd/liquibase-linter@latest
 ```
 
-Or download pre-built binaries from the [releases page](https://github.com/n2jsoft/liquibase-linter/releases).
+Or download pre-built binaries from the [releases page](https://github.com/n2jsoft-public-org/liquibase-linter/releases).
 
 ## Quick Start
 
@@ -214,7 +214,7 @@ jobs:
     
     - name: Download Liquibase Linter
       run: |
-        curl -L -o liquibase-linter https://github.com/n2jsoft/liquibase-linter/releases/latest/download/liquibase-linter-linux-amd64
+        curl -L -o liquibase-linter https://github.com/n2jsoft-public-org/liquibase-linter/releases/latest/download/liquibase-linter-linux-amd64
         chmod +x liquibase-linter
     
     - name: Run Liquibase Linter
@@ -232,7 +232,7 @@ jobs:
 liquibase-lint:
   stage: test
   script:
-    - curl -L -o liquibase-linter https://github.com/n2jsoft/liquibase-linter/releases/latest/download/liquibase-linter-linux-amd64
+    - curl -L -o liquibase-linter https://github.com/n2jsoft-public-org/liquibase-linter/releases/latest/download/liquibase-linter-linux-amd64
     - chmod +x liquibase-linter
     - ./liquibase-linter check --format=json db/changelog/
 ```
@@ -245,7 +245,7 @@ See [CI/CD Integration Guide](docs/cicd.md) for more examples.
 
 ```bash
 # Clone the repository
-git clone https://github.com/n2jsoft/liquibase-linter.git
+git clone https://github.com/n2jsoft-public-org/liquibase-linter.git
 cd liquibase-linter
 
 # Build
@@ -303,7 +303,7 @@ MIT License - see [LICENSE](LICENSE) for details.
 Contributions are welcome! Please see:
 
 - [Development Guide](docs/development.md) for setup and architecture
-- [Open Issues](https://github.com/n2jsoft/liquibase-linter/issues) for things to work on
+- [Open Issues](https://github.com/n2jsoft-public-org/liquibase-linter/issues) for things to work on
 - [Pull Request Guidelines](docs/development.md#contributing) for the workflow
 
 ## Acknowledgments
@@ -315,6 +315,6 @@ Inspired by the need for better security and quality control in database migrati
 ## Support
 
 - 📝 [Documentation](docs/)
-- 🐛 [Report Issues](https://github.com/n2jsoft/liquibase-linter/issues)
-- 💬 [Discussions](https://github.com/n2jsoft/liquibase-linter/discussions)
+- 🐛 [Report Issues](https://github.com/n2jsoft-public-org/liquibase-linter/issues)
+- 💬 [Discussions](https://github.com/n2jsoft-public-org/liquibase-linter/discussions)
 - ⭐ Star the project if you find it useful!

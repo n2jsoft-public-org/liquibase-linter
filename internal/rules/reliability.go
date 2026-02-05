@@ -5,16 +5,16 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/n2jsoft/liquibase-linter/internal/config"
-	"github.com/n2jsoft/liquibase-linter/internal/parser"
+	"github.com/n2jsoft-public-org/liquibase-linter/internal/config"
+	"github.com/n2jsoft-public-org/liquibase-linter/internal/parser"
 )
 
 // NoManualTransactionsRule detects manual transaction control in SQL.
 type NoManualTransactionsRule struct {
 	patterns           []*regexp.Regexp
-	caseInsensitive    bool
 	excludeChangeTypes map[string]bool
 	excludePatterns    []string
+	caseInsensitive    bool
 }
 
 // NewNoManualTransactionsRule creates a new rule with configuration.
@@ -87,7 +87,8 @@ func (r *NoManualTransactionsRule) Severity() Severity {
 func (r *NoManualTransactionsRule) Check(changelog *parser.Changelog) []Violation {
 	violations := make([]Violation, 0)
 
-	for _, cs := range changelog.ChangeSets {
+	for i := range changelog.ChangeSets {
+		cs := &changelog.ChangeSets[i]
 		// Check if file should be excluded
 		if r.shouldExcludeFile(cs.FilePath) {
 			continue

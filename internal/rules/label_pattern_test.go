@@ -3,17 +3,17 @@ package rules
 import (
 	"testing"
 
-	"github.com/n2jsoft/liquibase-linter/internal/config"
-	"github.com/n2jsoft/liquibase-linter/internal/parser"
+	"github.com/n2jsoft-public-org/liquibase-linter/internal/config"
+	"github.com/n2jsoft-public-org/liquibase-linter/internal/parser"
 )
 
 func TestLabelPatternRule_Check(t *testing.T) {
 	tests := []struct {
-		name           string
 		config         *config.LabelPatternConfig
 		changelog      *parser.Changelog
-		wantViolations int
+		name           string
 		wantMessage    string
+		wantViolations int
 	}{
 		{
 			name: "valid - label matches pattern",

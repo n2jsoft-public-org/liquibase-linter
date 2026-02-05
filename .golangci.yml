@@ -1,14 +1,12 @@
+version: '2'
+
 linters:
   enable:
     - errcheck
-    - gosimple
     - govet
     - ineffassign
     - staticcheck
-    - typecheck
     - unused
-    - gofmt
-    - goimports
     - revive
     - gosec
     - misspell
@@ -16,33 +14,30 @@ linters:
     - unparam
     - nakedret
     - gocritic
-
-linters-settings:
-  errcheck:
-    check-type-assertions: true
-    check-blank: true
-  
-  govet:
-    check-shadowing: true
-    enable-all: true
-  
-  revive:
-    confidence: 0.8
-  
-  gosec:
-    severity: medium
-    confidence: medium
-  
-  gocritic:
-    enabled-tags:
-      - diagnostic
-      - experimental
-      - opinionated
-      - performance
-      - style
+  settings:
+    errcheck:
+      check-type-assertions: true
+      check-blank: true
+    
+    govet:
+      enable-all: true
+    
+    revive:
+      confidence: 0.8
+    
+    gosec:
+      severity: medium
+      confidence: medium
+    
+    gocritic:
+      enabled-tags:
+        - diagnostic
+        - experimental
+        - opinionated
+        - performance
+        - style
 
 issues:
-  exclude-use-default: false
   max-same-issues: 0
 
 run:

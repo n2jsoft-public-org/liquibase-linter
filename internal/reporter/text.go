@@ -6,7 +6,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/n2jsoft/liquibase-linter/internal/rules"
+	"github.com/n2jsoft-public-org/liquibase-linter/internal/rules"
 )
 
 // TextReporter formats output as human-readable text
@@ -17,8 +17,12 @@ type TextReporter struct {
 // Report implements the Reporter interface for text output
 func (r *TextReporter) Report(w io.Writer, result *Result) error {
 	if len(result.Violations) == 0 {
-		fmt.Fprintf(w, "%sNo issues found!%s\n", r.color(colorGreen), r.colorReset())
-		fmt.Fprintf(w, "Checked %d file(s) in %v\n", result.FilesChecked, result.TotalTime)
+		if _, err := fmt.Fprintf(w, "%sNo issues found!%s\n", r.color(colorGreen), r.colorReset()); err != nil {
+			return err
+		}
+		if _, err := fmt.Fprintf(w, "Checked %d file(s) in %v\n", result.FilesChecked, result.TotalTime); err != nil {
+			return err
+		}
 		return nil
 	}
 
@@ -27,17 +31,21 @@ func (r *TextReporter) Report(w io.Writer, result *Result) error {
 
 	// Print violations grouped by file
 	for _, file := range r.sortedKeys(fileViolations) {
-		fmt.Fprintf(w, "\n%s%s%s\n", r.color(colorCyan), file, r.colorReset())
+		if _, err := fmt.Fprintf(w, "\n%s%s%s\n", r.color(colorCyan), file, r.colorReset()); err != nil {
+			return err
+		}
 		for _, v := range fileViolations[file] {
-			r.writeViolation(w, v)
+			if err := r.writeViolation(w, &v); err != nil {
+				return err
+			}
 		}
 	}
 
 	// Print summary
-	fmt.Fprintln(w, "")
-	r.writeSummary(w, NewSummary(result))
-
-	return nil
+	if _, err := fmt.Fprintln(w, ""); err != nil {
+		return err
+	}
+	return r.writeSummary(w, NewSummary(result))
 }
 
 // groupByFile groups violations by their file path
@@ -60,50 +68,74 @@ func (r *TextReporter) sortedKeys(m map[string][]rules.Violation) []string {
 }
 
 // writeViolation writes a single violation
-func (r *TextReporter) writeViolation(w io.Writer, v rules.Violation) {
+func (r *TextReporter) writeViolation(w io.Writer, v *rules.Violation) error {
 	icon := r.formatSeverity(v.Severity)
 	color := r.severityColor(v.Severity)
 
-	fmt.Fprintf(w, "  %s %s[%s]%s %s\n",
+	if _, err := fmt.Fprintf(w, "  %s %s[%s]%s %s\n",
 		icon,
 		r.color(color),
 		strings.ToUpper(v.Severity.String()),
 		r.colorReset(),
 		v.Message,
-	)
+	); err != nil {
+		return err
+	}
 
 	if v.ChangeSetID != "" {
-		fmt.Fprintf(w, "    Changeset: %s (author: %s)\n", v.ChangeSetID, v.Author)
+		if _, err := fmt.Fprintf(w, "    Changeset: %s (author: %s)\n", v.ChangeSetID, v.Author); err != nil {
+			return err
+		}
 	}
 	if v.Line != "" {
 		if v.LineNumber > 0 {
-			fmt.Fprintf(w, "    Line %d: %s\n", v.LineNumber, v.Line)
+			if _, err := fmt.Fprintf(w, "    Line %d: %s\n", v.LineNumber, v.Line); err != nil {
+				return err
+			}
 		} else {
-			fmt.Fprintf(w, "    SQL: %s\n", v.Line)
+			if _, err := fmt.Fprintf(w, "    SQL: %s\n", v.Line); err != nil {
+				return err
+			}
 		}
 	}
-	fmt.Fprintf(w, "    Rule: %s\n", v.Rule)
+	if _, err := fmt.Fprintf(w, "    Rule: %s\n", v.Rule); err != nil {
+		return err
+	}
+	return nil
 }
 
 // writeSummary writes the summary section
-func (r *TextReporter) writeSummary(w io.Writer, summary Summary) {
-	fmt.Fprintf(w, "%s=== SUMMARY ===%s\n", r.color(colorBold), r.colorReset())
-	fmt.Fprintf(w, "Total Issues: %d\n", summary.TotalViolations)
+func (r *TextReporter) writeSummary(w io.Writer, summary Summary) error {
+	if _, err := fmt.Fprintf(w, "%s=== SUMMARY ===%s\n", r.color(colorBold), r.colorReset()); err != nil {
+		return err
+	}
+	if _, err := fmt.Fprintf(w, "Total Issues: %d\n", summary.TotalViolations); err != nil {
+		return err
+	}
 
 	if summary.CriticalCount > 0 {
-		fmt.Fprintf(w, "  %sCritical: %d%s\n",
-			r.color(colorRed), summary.CriticalCount, r.colorReset())
+		if _, err := fmt.Fprintf(w, "  %sCritical: %d%s\n",
+			r.color(colorRed), summary.CriticalCount, r.colorReset()); err != nil {
+			return err
+		}
 	}
 	if summary.WarningCount > 0 {
-		fmt.Fprintf(w, "  %sWarning:  %d%s\n",
-			r.color(colorYellow), summary.WarningCount, r.colorReset())
+		if _, err := fmt.Fprintf(w, "  %sWarning:  %d%s\n",
+			r.color(colorYellow), summary.WarningCount, r.colorReset()); err != nil {
+			return err
+		}
 	}
 	if summary.InfoCount > 0 {
-		fmt.Fprintf(w, "  %sInfo:     %d%s\n",
-			r.color(colorBlue), summary.InfoCount, r.colorReset())
+		if _, err := fmt.Fprintf(w, "  %sInfo:     %d%s\n",
+			r.color(colorBlue), summary.InfoCount, r.colorReset()); err != nil {
+			return err
+		}
 	}
 
-	fmt.Fprintf(w, "Files Checked: %d\n", summary.FileCount)
+	if _, err := fmt.Fprintf(w, "Files Checked: %d\n", summary.FileCount); err != nil {
+		return err
+	}
+	return nil
 }
 
 // formatSeverity returns an icon for the severity level

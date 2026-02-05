@@ -6,12 +6,13 @@ import (
 	"io"
 	"time"
 
-	"github.com/n2jsoft/liquibase-linter/internal/rules"
+	"github.com/n2jsoft-public-org/liquibase-linter/internal/rules"
 )
 
 // Format represents the output format type
 type Format string
 
+// Supported output formats for linting results
 const (
 	FormatText  Format = "text"
 	FormatJSON  Format = "json"
@@ -26,11 +27,11 @@ type Reporter interface {
 
 // Result contains the complete linting results
 type Result struct {
-	Violations    []rules.Violation
-	FilesChecked  int
-	TotalTime     time.Duration
 	Timestamp     time.Time
 	LinterVersion string
+	Violations    []rules.Violation
+	TotalTime     time.Duration
+	FilesChecked  int
 }
 
 // Summary provides aggregated statistics about violations

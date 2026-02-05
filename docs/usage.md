@@ -16,32 +16,32 @@ This guide provides detailed information on using the Liquibase Linter effective
 ### Using Go Install
 
 ```bash
-go install github.com/n2jsoft/liquibase-linter/cmd/liquibase-linter@latest
+go install github.com/n2jsoft-public-org/liquibase-linter/cmd/liquibase-linter@latest
 ```
 
 ### Download Pre-built Binary
 
-Download from the [releases page](https://github.com/n2jsoft/liquibase-linter/releases):
+Download from the [releases page](https://github.com/n2jsoft-public-org/liquibase-linter/releases):
 
 ```bash
 # Linux
-curl -L -o liquibase-linter https://github.com/n2jsoft/liquibase-linter/releases/latest/download/liquibase-linter-linux-amd64
+curl -L -o liquibase-linter https://github.com/n2jsoft-public-org/liquibase-linter/releases/latest/download/liquibase-linter-linux-amd64
 chmod +x liquibase-linter
 sudo mv liquibase-linter /usr/local/bin/
 
 # macOS
-curl -L -o liquibase-linter https://github.com/n2jsoft/liquibase-linter/releases/latest/download/liquibase-linter-darwin-amd64
+curl -L -o liquibase-linter https://github.com/n2jsoft-public-org/liquibase-linter/releases/latest/download/liquibase-linter-darwin-amd64
 chmod +x liquibase-linter
 sudo mv liquibase-linter /usr/local/bin/
 
 # Windows (PowerShell)
-Invoke-WebRequest -Uri https://github.com/n2jsoft/liquibase-linter/releases/latest/download/liquibase-linter-windows-amd64.exe -OutFile liquibase-linter.exe
+Invoke-WebRequest -Uri https://github.com/n2jsoft-public-org/liquibase-linter/releases/latest/download/liquibase-linter-windows-amd64.exe -OutFile liquibase-linter.exe
 ```
 
 ### Build from Source
 
 ```bash
-git clone https://github.com/n2jsoft/liquibase-linter.git
+git clone https://github.com/n2jsoft-public-org/liquibase-linter.git
 cd liquibase-linter
 go build -o liquibase-linter ./cmd/liquibase-linter
 ```
@@ -460,6 +460,6 @@ For large codebases:
 
 ## Getting Help
 
-- Report bugs: https://github.com/n2jsoft/liquibase-linter/issues
-- Documentation: https://github.com/n2jsoft/liquibase-linter/docs
-- Discussions: https://github.com/n2jsoft/liquibase-linter/discussions
+- Report bugs: https://github.com/n2jsoft-public-org/liquibase-linter/issues
+- Documentation: https://github.com/n2jsoft-public-org/liquibase-linter/docs
+- Discussions: https://github.com/n2jsoft-public-org/liquibase-linter/discussions
