@@ -38,7 +38,6 @@ liquibase-linter/
 ├── .github/                    # GitHub workflows (if applicable)
 ├── go.mod
 ├── go.sum
-├── main.go                     # Temporary - to be migrated to cmd/
 ├── README.md
 ├── AGENTS.md                   # This file
 ├── LICENSE

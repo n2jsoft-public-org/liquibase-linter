@@ -86,6 +86,8 @@ func (p *YAMLParser) parseWithContext(filePath string, doc yamlDatabaseChangeLog
 
 	// Mark as visited
 	ctx.visitedFiles[normalizedPath] = true
+	// Track this file as processed
+	*ctx.processedFiles = append(*ctx.processedFiles, absPath)
 
 	// Track symlink resolution
 	if ctx.followSymlinks {
@@ -96,9 +98,10 @@ func (p *YAMLParser) parseWithContext(filePath string, doc yamlDatabaseChangeLog
 	}
 
 	changelog := &Changelog{
-		FilePath:   absPath,
-		Format:     FormatYAML,
-		ChangeSets: []ChangeSet{},
+		FilePath:      absPath,
+		Format:        FormatYAML,
+		ChangeSets:    []ChangeSet{},
+		IncludedFiles: []string{}, // Will be populated at the end
 	}
 
 	// Process each element in the databaseChangeLog array
@@ -141,6 +144,9 @@ func (p *YAMLParser) parseWithContext(filePath string, doc yamlDatabaseChangeLog
 			}
 		}
 	}
+
+	// Populate list of all included files
+	changelog.IncludedFiles = *ctx.processedFiles
 
 	return changelog, nil
 }
@@ -348,10 +354,13 @@ func (p *YAMLParser) handleInclude(data any, baseFilePath string, ctx *parseCont
 	childCtx := &parseContext{
 		visitedFiles:       ctx.visitedFiles,
 		symlinkResolutions: ctx.symlinkResolutions,
+		processedFiles:     ctx.processedFiles, // Share processed files list
 		currentDepth:       ctx.currentDepth + 1,
 		includeChain:       append(append([]string{}, ctx.includeChain...), includePath),
 		maxDepth:           ctx.maxDepth,
 		followSymlinks:     ctx.followSymlinks,
+		ignorePatterns:     ctx.ignorePatterns,
+		basePath:           ctx.basePath,
 	}
 
 	// Parse the included file using format auto-detection
@@ -409,6 +418,7 @@ func (p *YAMLParser) handleIncludeAll(data any, baseFilePath string, ctx *parseC
 		childCtx := &parseContext{
 			visitedFiles:       ctx.visitedFiles,
 			symlinkResolutions: ctx.symlinkResolutions,
+			processedFiles:     ctx.processedFiles, // Share processed files list
 			currentDepth:       ctx.currentDepth + 1,
 			includeChain:       append(append([]string{}, ctx.includeChain...), file),
 			maxDepth:           ctx.maxDepth,
@@ -438,6 +448,12 @@ func (p *YAMLParser) CanParse(filePath string) bool {
 func parseFileWithContext(filePath string, ctx *parseContext) (*Changelog, error) {
 	format := DetectFormat(filePath)
 
+	// Get absolute path for tracking
+	absPath, err := filepath.Abs(filePath)
+	if err != nil {
+		absPath = filePath
+	}
+
 	switch format {
 	case FormatYAML:
 		// Read and parse YAML
@@ -455,10 +471,14 @@ func parseFileWithContext(filePath string, ctx *parseContext) (*Changelog, error
 		return parser.parseWithContext(filePath, doc, ctx)
 
 	case FormatXML:
+		// Track the file manually since XML parser doesn't use context yet
+		*ctx.processedFiles = append(*ctx.processedFiles, absPath)
 		parser := &XMLParser{}
 		return parser.Parse(filePath)
 
 	case FormatSQL:
+		// Track the file manually since SQL parser doesn't use context yet
+		*ctx.processedFiles = append(*ctx.processedFiles, absPath)
 		parser := &SQLParser{}
 		return parser.Parse(filePath)
 

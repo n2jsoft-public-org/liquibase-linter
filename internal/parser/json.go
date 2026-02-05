@@ -78,6 +78,8 @@ func (p *JSONParser) parseWithContext(filePath string, doc yamlDatabaseChangeLog
 
 	// Mark as visited
 	ctx.visitedFiles[normalizedPath] = true
+	// Track this file as processed
+	*ctx.processedFiles = append(*ctx.processedFiles, absPath)
 
 	// Track symlink resolution
 	if ctx.followSymlinks {
@@ -88,9 +90,10 @@ func (p *JSONParser) parseWithContext(filePath string, doc yamlDatabaseChangeLog
 	}
 
 	changelog := &Changelog{
-		FilePath:   absPath,
-		Format:     FormatJSON,
-		ChangeSets: []ChangeSet{},
+		FilePath:      absPath,
+		Format:        FormatJSON,
+		ChangeSets:    []ChangeSet{},
+		IncludedFiles: []string{}, // Will be populated at the end
 	}
 
 	// Use YAML parser instance for shared parsing logic
@@ -131,6 +134,9 @@ func (p *JSONParser) parseWithContext(filePath string, doc yamlDatabaseChangeLog
 		}
 	}
 
+	// Populate list of all included files
+	changelog.IncludedFiles = *ctx.processedFiles
+
 	return changelog, nil
 }
 
@@ -158,10 +164,13 @@ func (p *JSONParser) handleInclude(data any, baseFilePath string, ctx *parseCont
 	childCtx := &parseContext{
 		visitedFiles:       ctx.visitedFiles,
 		symlinkResolutions: ctx.symlinkResolutions,
+		processedFiles:     ctx.processedFiles, // Share processed files list
 		currentDepth:       ctx.currentDepth + 1,
 		includeChain:       append(append([]string{}, ctx.includeChain...), includePath),
 		maxDepth:           ctx.maxDepth,
 		followSymlinks:     ctx.followSymlinks,
+		ignorePatterns:     ctx.ignorePatterns,
+		basePath:           ctx.basePath,
 	}
 
 	return parseFileWithContext(includePath, childCtx)
@@ -212,6 +221,7 @@ func (p *JSONParser) handleIncludeAll(data any, baseFilePath string, ctx *parseC
 		childCtx := &parseContext{
 			visitedFiles:       ctx.visitedFiles,
 			symlinkResolutions: ctx.symlinkResolutions,
+			processedFiles:     ctx.processedFiles, // Share processed files list
 			currentDepth:       ctx.currentDepth + 1,
 			includeChain:       append(append([]string{}, ctx.includeChain...), file),
 			maxDepth:           ctx.maxDepth,

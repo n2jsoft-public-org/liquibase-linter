@@ -253,9 +253,10 @@ func (p *XMLParser) Parse(filePath string) (*Changelog, error) {
 
 	// Convert to internal representation
 	changelog := &Changelog{
-		FilePath:   filePath,
-		Format:     FormatXML,
-		ChangeSets: make([]ChangeSet, 0, len(xmlDoc.ChangeSets)),
+		FilePath:      filePath,
+		Format:        FormatXML,
+		ChangeSets:    make([]ChangeSet, 0, len(xmlDoc.ChangeSets)),
+		IncludedFiles: []string{filePath}, // XML parser doesn't support includes recursively yet
 	}
 
 	for _, xmlCS := range xmlDoc.ChangeSets {

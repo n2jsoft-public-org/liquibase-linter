@@ -39,9 +39,10 @@ func (p *SQLParser) Parse(filePath string) (*Changelog, error) {
 	defer file.Close()
 
 	changelog := &Changelog{
-		FilePath:   filePath,
-		Format:     FormatSQL,
-		ChangeSets: make([]ChangeSet, 0),
+		FilePath:      filePath,
+		Format:        FormatSQL,
+		ChangeSets:    make([]ChangeSet, 0),
+		IncludedFiles: []string{filePath}, // SQL parser doesn't support includes
 	}
 
 	scanner := bufio.NewScanner(file)

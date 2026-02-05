@@ -37,6 +37,7 @@ func (e *MaxDepthExceededError) Error() string {
 type parseContext struct {
 	visitedFiles       map[string]bool
 	symlinkResolutions map[string]string
+	processedFiles     *[]string // Pointer to allow shared modifications
 	currentDepth       int
 	includeChain       []string
 	maxDepth           int
@@ -47,9 +48,11 @@ type parseContext struct {
 
 // newParseContext creates a new parse context with initial values
 func newParseContext(maxDepth int, followSymlinks bool) *parseContext {
+	processedFiles := []string{}
 	return &parseContext{
 		visitedFiles:       make(map[string]bool),
 		symlinkResolutions: make(map[string]string),
+		processedFiles:     &processedFiles,
 		currentDepth:       0,
 		includeChain:       []string{},
 		maxDepth:           maxDepth,
@@ -74,12 +77,13 @@ func (ctx *parseContext) ShouldIgnore(filePath string) bool {
 	// Make file path relative to base path for pattern matching
 	relPath, err := GetRelativePath(ctx.basePath, filePath)
 	if err != nil {
-		// If we can't make it relative, use absolute path
+		// If we can't make it relative, try matching with absolute path
 		relPath = filePath
 	}
 
-	// Normalize path separators for consistent matching
-	relPath = NormalizePath(relPath)
+	// Don't normalize - keep it relative for pattern matching
+	// Just clean the path to handle . and .. segments
+	relPath = filepath.Clean(relPath)
 
 	for _, pattern := range ctx.ignorePatterns {
 		matched, err := MatchesResourceFilter(relPath, pattern)
@@ -113,9 +117,10 @@ func (f ChangelogFormat) String() string {
 
 // Changelog represents a parsed Liquibase changelog file.
 type Changelog struct {
-	FilePath   string
-	Format     ChangelogFormat
-	ChangeSets []ChangeSet
+	FilePath      string
+	Format        ChangelogFormat
+	ChangeSets    []ChangeSet
+	IncludedFiles []string // List of all files processed (root + includes)
 }
 
 // ChangeSet represents a single changeset in a changelog.
