@@ -1,0 +1,6 @@
+services:
+  linter:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: liquibase-linter:latest
