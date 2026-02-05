@@ -10,8 +10,8 @@ func TestNoIfExistsRule_Check(t *testing.T) {
 	rule := NewNoIfExistsRule()
 
 	tests := []struct {
-		name           string
 		changelog      *parser.Changelog
+		name           string
 		wantViolations int
 	}{
 		{

@@ -40,7 +40,8 @@ func (r *MissingIndexRule) Check(changelog *parser.Changelog) []Violation {
 	indexes := make(map[string]map[string]bool) // table -> column -> exists
 
 	// First pass: collect all foreign keys and indexes
-	for _, cs := range changelog.ChangeSets {
+	for i := range changelog.ChangeSets {
+		cs := &changelog.ChangeSets[i]
 		for _, change := range cs.Changes {
 			tableName := strings.ToLower(change.TableName)
 
@@ -64,7 +65,8 @@ func (r *MissingIndexRule) Check(changelog *parser.Changelog) []Violation {
 	}
 
 	// Second pass: check for missing indexes on foreign keys
-	for _, cs := range changelog.ChangeSets {
+	for i := range changelog.ChangeSets {
+		cs := &changelog.ChangeSets[i]
 		for _, change := range cs.Changes {
 			if strings.Contains(strings.ToLower(change.Type), "foreignkey") {
 				tableName := strings.ToLower(change.TableName)
@@ -127,7 +129,8 @@ func (r *TableLockRule) Check(changelog *parser.Changelog) []Violation {
 		"ADD CONSTRAINT", "ADD FOREIGN KEY", "ADD PRIMARY KEY",
 	}
 
-	for _, cs := range changelog.ChangeSets {
+	for i := range changelog.ChangeSets {
+		cs := &changelog.ChangeSets[i]
 		// If no context, operation might run on production
 		if cs.Context == "" {
 			for _, change := range cs.Changes {
@@ -218,7 +221,8 @@ func (r *LargeDataOperationRule) Check(changelog *parser.Changelog) []Violation 
 	deleteWithoutWhere := regexp.MustCompile(`(?i)DELETE\s+FROM\s+\w+\s*(?:;|$)`)
 	whereClause := regexp.MustCompile(`(?i)WHERE`)
 
-	for _, cs := range changelog.ChangeSets {
+	for i := range changelog.ChangeSets {
+		cs := &changelog.ChangeSets[i]
 		for _, change := range cs.Changes {
 			sql := change.SQL
 
@@ -280,7 +284,8 @@ func (r *SelectStarRule) Check(changelog *parser.Changelog) []Violation {
 
 	selectStarPattern := regexp.MustCompile(`(?i)SELECT\s+\*\s+FROM`)
 
-	for _, cs := range changelog.ChangeSets {
+	for i := range changelog.ChangeSets {
+		cs := &changelog.ChangeSets[i]
 		for _, change := range cs.Changes {
 			if selectStarPattern.MatchString(change.SQL) {
 				violations = append(violations, Violation{

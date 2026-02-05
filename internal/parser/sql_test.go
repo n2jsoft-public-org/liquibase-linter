@@ -50,7 +50,7 @@ func TestSQLParser_ParseValidChangelog(t *testing.T) {
 	if cs3.ID != "3" {
 		t.Errorf("ChangeSet[2].ID = %v, want 3", cs3.ID)
 	}
-	if len(cs3.Context) == 0 {
+	if cs3.Context == "" {
 		t.Error("ChangeSet[2] should have context")
 	}
 }

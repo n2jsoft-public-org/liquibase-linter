@@ -10,9 +10,9 @@ type JSONReporter struct{}
 
 // JSONOutput represents the JSON output structure
 type JSONOutput struct {
+	Violations []JSONViolation `json:"violations"`
 	Metadata   JSONMetadata    `json:"metadata"`
 	Summary    JSONSummary     `json:"summary"`
-	Violations []JSONViolation `json:"violations"`
 }
 
 // JSONMetadata contains metadata about the linting run
@@ -37,11 +37,11 @@ type JSONViolation struct {
 	Severity      string `json:"severity"`
 	Message       string `json:"message"`
 	FilePath      string `json:"file_path"`
-	LineNumber    int    `json:"line_number,omitempty"`
 	Line          string `json:"line,omitempty"`
-	SQLLineNumber int    `json:"sql_line_number,omitempty"` // Line number within the SQL content
 	ChangeSetID   string `json:"changeset_id,omitempty"`
 	Author        string `json:"author,omitempty"`
+	LineNumber    int    `json:"line_number,omitempty"`
+	SQLLineNumber int    `json:"sql_line_number,omitempty"` // Line number within the SQL content
 }
 
 // Report implements the Reporter interface for JSON output

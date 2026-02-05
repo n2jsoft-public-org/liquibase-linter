@@ -69,8 +69,8 @@ type SARIFLocation struct {
 
 // SARIFPhysicalLocation represents a physical location
 type SARIFPhysicalLocation struct {
-	ArtifactLocation SARIFArtifactLocation `json:"artifactLocation"`
 	Region           *SARIFRegion          `json:"region,omitempty"`
+	ArtifactLocation SARIFArtifactLocation `json:"artifactLocation"`
 }
 
 // SARIFArtifactLocation represents a file location

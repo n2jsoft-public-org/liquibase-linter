@@ -27,11 +27,11 @@ type Reporter interface {
 
 // Result contains the complete linting results
 type Result struct {
-	Violations    []rules.Violation
-	FilesChecked  int
-	TotalTime     time.Duration
 	Timestamp     time.Time
 	LinterVersion string
+	Violations    []rules.Violation
+	TotalTime     time.Duration
+	FilesChecked  int
 }
 
 // Summary provides aggregated statistics about violations

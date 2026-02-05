@@ -20,6 +20,8 @@ type xmlDatabaseChangeLog struct {
 
 // xmlChangeSet represents a changeset element in XML.
 type xmlChangeSet struct {
+	Preconditions   *xmlPreconditions   `xml:"preConditions"`
+	Rollback        *xmlRollback        `xml:"rollback"`
 	ID              string              `xml:"id,attr"`
 	Author          string              `xml:"author,attr"`
 	Context         string              `xml:"context,attr"`
@@ -30,8 +32,6 @@ type xmlChangeSet struct {
 	FailOnError     string              `xml:"failOnError,attr"`
 	LogicalFilePath string              `xml:"logicalFilePath,attr"`
 	Comment         string              `xml:"comment"`
-	Preconditions   *xmlPreconditions   `xml:"preConditions"`
-	CreateTable     []xmlCreateTable    `xml:"createTable"`
 	DropTable       []xmlDropTable      `xml:"dropTable"`
 	AddColumn       []xmlAddColumn      `xml:"addColumn"`
 	DropColumn      []xmlDropColumn     `xml:"dropColumn"`
@@ -43,7 +43,7 @@ type xmlChangeSet struct {
 	Insert          []xmlInsert         `xml:"insert"`
 	Update          []xmlUpdate         `xml:"update"`
 	Delete          []xmlDelete         `xml:"delete"`
-	Rollback        *xmlRollback        `xml:"rollback"`
+	CreateTable     []xmlCreateTable    `xml:"createTable"`
 }
 
 // xmlPreconditions represents preconditions element.
@@ -108,6 +108,7 @@ type xmlCreateTable struct {
 
 // xmlColumn represents a column definition.
 type xmlColumn struct {
+	Constraints          *xmlConstraints `xml:"constraints"`
 	Name                 string          `xml:"name,attr"`
 	Type                 string          `xml:"type,attr"`
 	Value                string          `xml:"value,attr"`
@@ -115,7 +116,6 @@ type xmlColumn struct {
 	DefaultValueComputed string          `xml:"defaultValueComputed,attr"`
 	AutoIncrement        string          `xml:"autoIncrement,attr"`
 	Remarks              string          `xml:"remarks,attr"`
-	Constraints          *xmlConstraints `xml:"constraints"`
 }
 
 // xmlConstraints represents column constraints.
@@ -260,8 +260,8 @@ func (p *XMLParser) Parse(filePath string) (*Changelog, error) {
 		IncludedFiles: []string{filePath}, // XML parser doesn't support includes recursively yet
 	}
 
-	for _, xmlCS := range xmlDoc.ChangeSets {
-		cs := p.convertChangeSet(xmlCS, filePath)
+	for i := range xmlDoc.ChangeSets {
+		cs := p.convertChangeSet(&xmlDoc.ChangeSets[i], filePath)
 		changelog.ChangeSets = append(changelog.ChangeSets, cs)
 	}
 
@@ -274,7 +274,7 @@ func (p *XMLParser) CanParse(filePath string) bool {
 }
 
 // convertChangeSet converts an XML changeset to internal representation.
-func (p *XMLParser) convertChangeSet(xmlCS xmlChangeSet, filePath string) ChangeSet {
+func (p *XMLParser) convertChangeSet(xmlCS *xmlChangeSet, filePath string) ChangeSet {
 	cs := ChangeSet{
 		ID:              xmlCS.ID,
 		Author:          xmlCS.Author,
@@ -303,13 +303,13 @@ func (p *XMLParser) convertChangeSet(xmlCS xmlChangeSet, filePath string) Change
 	}
 
 	// Parse boolean attributes
-	cs.RunAlways = strings.ToLower(xmlCS.RunAlways) == "true"
-	cs.RunOnChange = strings.ToLower(xmlCS.RunOnChange) == "true"
-	cs.FailOnError = strings.ToLower(xmlCS.FailOnError) != "false" // Default is true
+	cs.RunAlways = strings.EqualFold(xmlCS.RunAlways, "true")
+	cs.RunOnChange = strings.EqualFold(xmlCS.RunOnChange, "true")
+	cs.FailOnError = !strings.EqualFold(xmlCS.FailOnError, "false") // Default is true
 
 	// Convert preconditions
 	if xmlCS.Preconditions != nil {
-		precond := p.convertPreconditions(*xmlCS.Preconditions)
+		precond := p.convertPreconditions(xmlCS.Preconditions)
 		if len(precond) > 0 {
 			cs.Preconditions = &precond[0]
 		}
@@ -331,14 +331,14 @@ func (p *XMLParser) convertChangeSet(xmlCS xmlChangeSet, filePath string) Change
 
 	// Convert rollback
 	if xmlCS.Rollback != nil {
-		cs.Rollback = p.convertRollback(*xmlCS.Rollback)
+		cs.Rollback = p.convertRollback(xmlCS.Rollback)
 	}
 
 	return cs
 }
 
 // convertPreconditions converts XML preconditions to internal representation.
-func (p *XMLParser) convertPreconditions(xmlPrec xmlPreconditions) []Precondition {
+func (p *XMLParser) convertPreconditions(xmlPrec *xmlPreconditions) []Precondition {
 	var preconditions []Precondition
 
 	for _, te := range xmlPrec.TableExists {
@@ -598,7 +598,7 @@ func (p *XMLParser) convertDeletes(deletes []xmlDelete) []Change {
 }
 
 // convertRollback converts rollback instructions.
-func (p *XMLParser) convertRollback(xmlRB xmlRollback) *Rollback {
+func (p *XMLParser) convertRollback(xmlRB *xmlRollback) *Rollback {
 	rb := &Rollback{
 		Changes: make([]Change, 0),
 	}

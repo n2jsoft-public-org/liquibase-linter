@@ -214,24 +214,24 @@ Examples:
 		parsedFiles[normalizedFile] = true
 
 		// Determine base path for ignore pattern matching
-		fileInfo, err := os.Stat(path)
+		fileInfo, statErr := os.Stat(path)
 		var basePath string
-		if err == nil {
+		if statErr == nil {
 			if fileInfo.IsDir() {
 				basePath = path
 			} else {
 				basePath = parser.GetFileDir(path)
 			}
-			absBasePath, err := parser.ResolveRelativePath(".", basePath)
-			if err == nil {
+			absBasePath, resolveErr := parser.ResolveRelativePath(".", basePath)
+			if resolveErr == nil {
 				basePath = absBasePath
 			}
 		}
 
 		// Parse changelog with ignore patterns
-		changelog, err := parser.ParseWithConfig(file, cfg.Ignore, basePath)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error parsing %s: %v\n", file, err)
+		changelog, parseErr := parser.ParseWithConfig(file, cfg.Ignore, basePath)
+		if parseErr != nil {
+			fmt.Fprintf(os.Stderr, "Error parsing %s: %v\n", file, parseErr)
 			continue
 		}
 
@@ -288,16 +288,16 @@ func discoverFiles(path string, cfg *config.Config) ([]string, error) {
 
 	if info.IsDir() {
 		// Discover all changelog files in directory
-		discovered, err := parser.DiscoverChangelogFiles(path, "", cfg.Parser.FollowSymlinks)
-		if err != nil {
-			return nil, err
+		discovered, discoverErr := parser.DiscoverChangelogFiles(path, "", cfg.Parser.FollowSymlinks)
+		if discoverErr != nil {
+			return nil, discoverErr
 		}
 		files = discovered
 		basePath = path
 	} else {
 		// Single file
-		absPath, err := parser.ResolveRelativePath(".", path)
-		if err != nil {
+		absPath, resolveErr := parser.ResolveRelativePath(".", path)
+		if resolveErr != nil {
 			return nil, err
 		}
 		files = []string{absPath}
@@ -340,7 +340,11 @@ func discoverConfigFile(targetPath string) string {
 		}
 	} else {
 		// If target doesn't exist, use current directory
-		startDir, _ = os.Getwd()
+		var gwdErr error
+		startDir, gwdErr = os.Getwd()
+		if gwdErr != nil {
+			startDir = "."
+		}
 	}
 
 	// Convert to absolute path
@@ -454,7 +458,7 @@ func printConfigSummary(cfg *config.Config, targetPath string) {
 }
 
 // shouldIgnore checks if a file matches any ignore pattern
-func shouldIgnore(file string, basePath string, ignorePatterns []string) bool {
+func shouldIgnore(file, basePath string, ignorePatterns []string) bool {
 	// Make file path relative to base path for pattern matching
 	relPath, err := parser.GetRelativePath(basePath, file)
 	if err != nil {

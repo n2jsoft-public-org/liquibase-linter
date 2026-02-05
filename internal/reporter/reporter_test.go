@@ -277,12 +277,12 @@ func TestSARIFReporter_Report(t *testing.T) {
 func TestSARIFReporter_SeverityMapping(t *testing.T) {
 	reporter := &SARIFReporter{}
 	tests := []struct {
-		severity rules.Severity
 		want     string
+		severity rules.Severity
 	}{
-		{rules.SeverityCritical, "error"},
-		{rules.SeverityWarning, "warning"},
-		{rules.SeverityInfo, "note"},
+		{want: "error", severity: rules.SeverityCritical},
+		{want: "warning", severity: rules.SeverityWarning},
+		{want: "note", severity: rules.SeverityInfo},
 	}
 
 	for _, tt := range tests {

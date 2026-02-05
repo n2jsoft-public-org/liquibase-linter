@@ -38,7 +38,8 @@ func (r *MissingRollbackRule) Severity() Severity {
 func (r *MissingRollbackRule) Check(changelog *parser.Changelog) []Violation {
 	violations := make([]Violation, 0)
 
-	for _, cs := range changelog.ChangeSets {
+	for i := range changelog.ChangeSets {
+		cs := &changelog.ChangeSets[i]
 		if !cs.HasRollback() {
 			violations = append(violations, Violation{
 				Rule:        r.ID(),
@@ -115,7 +116,7 @@ func (r *NonIdempotentChangesRule) shouldExcludeFile(filePath string) bool {
 }
 
 // hasRiskyOperation checks if a changeset contains operations that typically need preconditions.
-func (r *NonIdempotentChangesRule) hasRiskyOperation(cs parser.ChangeSet) (bool, string) {
+func (r *NonIdempotentChangesRule) hasRiskyOperation(cs *parser.ChangeSet) (hasRisky bool, operation string) {
 	// Operations that typically need preconditions to be idempotent
 	riskyOperations := map[string]bool{
 		"createtable":         true,
@@ -140,7 +141,8 @@ func (r *NonIdempotentChangesRule) hasRiskyOperation(cs parser.ChangeSet) (bool,
 func (r *NonIdempotentChangesRule) Check(changelog *parser.Changelog) []Violation {
 	violations := make([]Violation, 0)
 
-	for _, cs := range changelog.ChangeSets {
+	for i := range changelog.ChangeSets {
+		cs := &changelog.ChangeSets[i]
 		// Skip if runAlways is set (indicates intentional re-run)
 		if cs.RunAlways {
 			continue
@@ -217,7 +219,8 @@ func (r *NamingConventionRule) Check(changelog *parser.Changelog) []Violation {
 	// Valid naming pattern: lowercase letters, numbers, underscores
 	validPattern := regexp.MustCompile(`^[a-z][a-z0-9_]*$`)
 
-	for _, cs := range changelog.ChangeSets {
+	for i := range changelog.ChangeSets {
+		cs := &changelog.ChangeSets[i]
 		for _, change := range cs.Changes {
 			var name string
 			var objectType string
@@ -278,7 +281,8 @@ func (r *ChangesetDocumentationRule) Severity() Severity {
 func (r *ChangesetDocumentationRule) Check(changelog *parser.Changelog) []Violation {
 	violations := make([]Violation, 0)
 
-	for _, cs := range changelog.ChangeSets {
+	for i := range changelog.ChangeSets {
+		cs := &changelog.ChangeSets[i]
 		if strings.TrimSpace(cs.Comment) == "" {
 			violations = append(violations, Violation{
 				Rule:        r.ID(),
@@ -323,7 +327,8 @@ func (r *ContextMisuseRule) Check(changelog *parser.Changelog) []Violation {
 
 	dangerousOps := []string{"DROP", "TRUNCATE", "DELETE"}
 
-	for _, cs := range changelog.ChangeSets {
+	for i := range changelog.ChangeSets {
+		cs := &changelog.ChangeSets[i]
 		// If no context is specified, these operations could run in production
 		if cs.Context == "" {
 			for _, change := range cs.Changes {
@@ -415,7 +420,8 @@ func (r *SprintFolderStructureRule) Check(changelog *parser.Changelog) []Violati
 		return violations
 	}
 
-	for _, cs := range changelog.ChangeSets {
+	for i := range changelog.ChangeSets {
+		cs := &changelog.ChangeSets[i]
 		// Check if file should be excluded
 		if r.shouldExclude(cs.FilePath) {
 			continue
@@ -550,7 +556,8 @@ func (r *DDLLocationRule) Check(changelog *parser.Changelog) []Violation {
 		return violations
 	}
 
-	for _, cs := range changelog.ChangeSets {
+	for i := range changelog.ChangeSets {
+		cs := &changelog.ChangeSets[i]
 		// Check if file should be excluded
 		if r.shouldExclude(cs.FilePath) {
 			continue
@@ -661,7 +668,8 @@ func (r *DMLLocationRule) Check(changelog *parser.Changelog) []Violation {
 		return violations
 	}
 
-	for _, cs := range changelog.ChangeSets {
+	for i := range changelog.ChangeSets {
+		cs := &changelog.ChangeSets[i]
 		// Check if file should be excluded
 		if r.shouldExclude(cs.FilePath) {
 			continue
@@ -725,8 +733,8 @@ func (r *DMLLocationRule) isInDataDir(filePath string, dataRe *regexp.Regexp) bo
 // LabelPatternRule enforces label naming conventions.
 type LabelPatternRule struct {
 	patterns        []*regexp.Regexp
-	requireLabel    bool
 	excludePatterns []string
+	requireLabel    bool
 }
 
 // NewLabelPatternRule creates a new label pattern rule with configuration.
@@ -787,7 +795,8 @@ func (r *LabelPatternRule) Severity() Severity {
 func (r *LabelPatternRule) Check(changelog *parser.Changelog) []Violation {
 	violations := make([]Violation, 0)
 
-	for _, cs := range changelog.ChangeSets {
+	for i := range changelog.ChangeSets {
+		cs := &changelog.ChangeSets[i]
 		// Check if file should be excluded
 		if r.shouldExclude(cs.FilePath) {
 			continue
@@ -913,14 +922,15 @@ func (r *RedundantOnErrorHaltRule) Severity() Severity {
 func (r *RedundantOnErrorHaltRule) Check(changelog *parser.Changelog) []Violation {
 	violations := make([]Violation, 0)
 
-	for _, cs := range changelog.ChangeSets {
+	for i := range changelog.ChangeSets {
+		cs := &changelog.ChangeSets[i]
 		// Only check changesets that have preconditions
 		if cs.Preconditions == nil {
 			continue
 		}
 
 		// Check if onError is explicitly set to "HALT"
-		if strings.ToUpper(cs.Preconditions.OnError) == "HALT" {
+		if strings.EqualFold(cs.Preconditions.OnError, "HALT") {
 			violations = append(violations, Violation{
 				Rule:        r.ID(),
 				Severity:    r.Severity(),
@@ -986,7 +996,8 @@ var ifExistsPatterns = []*regexp.Regexp{
 func (r *NoIfExistsRule) Check(changelog *parser.Changelog) []Violation {
 	violations := make([]Violation, 0)
 
-	for _, cs := range changelog.ChangeSets {
+	for i := range changelog.ChangeSets {
+		cs := &changelog.ChangeSets[i]
 		for _, change := range cs.Changes {
 			// Only check SQL changes
 			if change.SQL == "" {
@@ -1071,17 +1082,18 @@ func (r *AtomicChangesetRule) Check(changelog *parser.Changelog) []Violation {
 
 	violations := make([]Violation, 0)
 
-	for _, cs := range changelog.ChangeSets {
+	for i := range changelog.ChangeSets {
+		cs := &changelog.ChangeSets[i]
 		// Check if file should be excluded
 		if r.shouldExcludeFile(cs.FilePath) {
 			continue
 		}
 
 		// Count changes in this changeset
-		changeCount := r.countChanges(&cs)
+		changeCount := r.countChanges(cs)
 
 		if changeCount > 1 {
-			changeTypes := r.getChangeTypes(&cs)
+			changeTypes := r.getChangeTypes(cs)
 			violations = append(violations, Violation{
 				Rule:     r.ID(),
 				Severity: r.Severity(),

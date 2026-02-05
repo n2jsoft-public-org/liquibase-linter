@@ -37,13 +37,13 @@ func (e *MaxDepthExceededError) Error() string {
 type parseContext struct {
 	visitedFiles       map[string]bool
 	symlinkResolutions map[string]string
-	processedFiles     *[]string // Pointer to allow shared modifications
-	currentDepth       int
+	processedFiles     *[]string
+	basePath           string
 	includeChain       []string
+	ignorePatterns     []string
 	maxDepth           int
+	currentDepth       int
 	followSymlinks     bool
-	ignorePatterns     []string // Patterns to ignore during include/includeAll
-	basePath           string   // Base path for relative pattern matching
 }
 
 // newParseContext creates a new parse context with initial values
@@ -127,20 +127,20 @@ type Changelog struct {
 
 // ChangeSet represents a single changeset in a changelog.
 type ChangeSet struct {
-	ID              string
-	Author          string
-	FilePath        string
-	Changes         []Change
 	Rollback        *Rollback
 	Preconditions   *Precondition
+	Comment         string
+	FilePath        string
+	Author          string
 	Context         string
+	ID              string
+	LogicalFilePath string
+	Changes         []Change
 	Labels          []string
 	DBMSList        []string
 	RunAlways       bool
 	RunOnChange     bool
 	FailOnError     bool
-	Comment         string
-	LogicalFilePath string
 }
 
 // Change represents a database change within a changeset.
@@ -155,16 +155,16 @@ type Change struct {
 
 // Rollback represents rollback instructions for a changeset.
 type Rollback struct {
-	Changes []Change
 	SQL     string
+	Changes []Change
 }
 
 // Precondition represents a precondition for a changeset.
 type Precondition struct {
+	Attributes map[string]string
 	Type       string
 	OnFail     string
 	OnError    string
-	Attributes map[string]string
 }
 
 // Parser is the interface that all format-specific parsers must implement.

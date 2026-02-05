@@ -4,6 +4,7 @@ package rules
 
 import (
 	"bufio"
+	"fmt"
 	"os"
 	"strings"
 
@@ -39,13 +40,13 @@ func (s Severity) String() string {
 // Violation represents a single rule violation found in a changelog.
 type Violation struct {
 	Rule        string
-	Severity    Severity
 	Message     string
 	FilePath    string
-	LineNumber  int
 	Line        string // The actual line content that triggered the violation
 	ChangeSetID string
 	Author      string
+	Severity    Severity
+	LineNumber  int
 }
 
 // Rule is the interface that all linting rules must implement.
@@ -146,7 +147,10 @@ func ReadLineFromFile(filePath string, lineNumber int) string {
 		return ""
 	}
 	defer func() {
-		_ = file.Close()
+		if closeErr := file.Close(); closeErr != nil {
+			// Log but don't fail - this is a best effort to read
+			fmt.Fprintf(os.Stderr, "warning: failed to close file: %v\n", closeErr)
+		}
 	}()
 
 	scanner := bufio.NewScanner(file)

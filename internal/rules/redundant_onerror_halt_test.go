@@ -10,8 +10,8 @@ func TestRedundantOnErrorHaltRule_Check(t *testing.T) {
 	rule := NewRedundantOnErrorHaltRule()
 
 	tests := []struct {
-		name          string
 		changelog     *parser.Changelog
+		name          string
 		wantViolation bool
 	}{
 		{

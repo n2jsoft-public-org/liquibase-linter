@@ -8,7 +8,7 @@ import (
 // ConvertChange converts a change from a map[string]any structure to a Change object.
 // This is used by YAML and JSON parsers which unmarshal to dynamic structures.
 // Returns an error with full context (file path, changeset ID, change type, field) on validation failures.
-func ConvertChange(changeType string, data any, filePath string, changesetID string) (Change, error) {
+func ConvertChange(changeType string, data any, filePath, changesetID string) (Change, error) {
 	// Handle nil data
 	if data == nil {
 		return Change{}, fmt.Errorf("%s:changeSet[%s]:%s: change data is nil", filePath, changesetID, changeType)

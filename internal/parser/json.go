@@ -28,13 +28,16 @@ func (p *JSONParser) ParseWithConfig(filePath string, ignorePatterns []string, b
 
 	// Parse JSON - reuse YAML struct since it has dual tags
 	var doc yamlDatabaseChangeLog
-	if err := json.Unmarshal(data, &doc); err != nil {
-		return nil, fmt.Errorf("failed to parse JSON: %w", err)
+	if unmarshalErr := json.Unmarshal(data, &doc); unmarshalErr != nil {
+		return nil, fmt.Errorf("failed to unmarshal JSON: %w", unmarshalErr)
 	}
 
 	// Create parse context with default config values
 	ctx := newParseContext(10, true)
-	absPath, _ := filepath.Abs(filePath)
+	absPath, err := filepath.Abs(filePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to resolve absolute path: %w", err)
+	}
 	ctx.includeChain = []string{absPath}
 
 	// Set ignore patterns if provided

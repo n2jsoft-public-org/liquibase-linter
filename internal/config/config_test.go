@@ -91,7 +91,7 @@ severity_threshold: critical
 `
 
 	//nolint:gosec // G306: Test configuration file, permissions are acceptable
-	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
+	if err := os.WriteFile(configPath, []byte(configContent), 0o644); err != nil {
 		t.Fatalf("Failed to create test config file: %v", err)
 	}
 
@@ -140,7 +140,7 @@ func TestLoad_InvalidYAML(t *testing.T) {
 `
 
 	//nolint:gosec // G306: Test configuration file, permissions are acceptable
-	if err := os.WriteFile(configPath, []byte(invalidContent), 0644); err != nil {
+	if err := os.WriteFile(configPath, []byte(invalidContent), 0o644); err != nil {
 		t.Fatalf("Failed to create test config file: %v", err)
 	}
 
@@ -185,8 +185,8 @@ func TestValidate_InvalidRuleSeverity(t *testing.T) {
 
 func TestValidate_ValidConfig(t *testing.T) {
 	tests := []struct {
-		name   string
 		config *Config
+		name   string
 	}{
 		{
 			name:   "default config",
@@ -246,7 +246,7 @@ func TestInitConfig(t *testing.T) {
 	}
 
 	// Check file exists
-	if _, err := os.Stat(configPath); os.IsNotExist(err) {
+	if _, statErr := os.Stat(configPath); os.IsNotExist(statErr) {
 		t.Fatal("Configuration file was not created")
 	}
 
@@ -258,7 +258,7 @@ func TestInitConfig(t *testing.T) {
 	}
 
 	content := string(data)
-	if len(content) == 0 {
+	if content == "" {
 		t.Error("Created config file is empty")
 	}
 
@@ -279,7 +279,7 @@ func TestInitConfig_FileExists(t *testing.T) {
 
 	// Create file first
 	//nolint:gosec // G306: Test file, permissions are acceptable
-	if err := os.WriteFile(configPath, []byte("test"), 0644); err != nil {
+	if err := os.WriteFile(configPath, []byte("test"), 0o644); err != nil {
 		t.Fatalf("Failed to create test file: %v", err)
 	}
 

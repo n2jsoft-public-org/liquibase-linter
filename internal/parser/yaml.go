@@ -35,14 +35,17 @@ func (p *YAMLParser) ParseWithConfig(filePath string, ignorePatterns []string, b
 
 	// Parse YAML
 	var doc yamlDatabaseChangeLog
-	if err := yaml.Unmarshal(data, &doc); err != nil {
-		return nil, fmt.Errorf("failed to parse YAML: %w", err)
+	if unmarshalErr := yaml.Unmarshal(data, &doc); unmarshalErr != nil {
+		return nil, fmt.Errorf("failed to unmarshal YAML: %w", unmarshalErr)
 	}
 
 	// Create parse context with default config values
 	// These will be overridden if config is available
 	ctx := newParseContext(10, true)
-	absPath, _ := filepath.Abs(filePath)
+	absPath, err := filepath.Abs(filePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to resolve absolute path: %w", err)
+	}
 	ctx.includeChain = []string{absPath}
 
 	// Set ignore patterns if provided

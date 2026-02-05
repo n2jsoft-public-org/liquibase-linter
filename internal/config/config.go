@@ -13,22 +13,22 @@ import (
 // Config represents the complete configuration for the linter.
 type Config struct {
 	Rules                map[string]RuleConfig      `yaml:"rules"`
-	Ignore               []string                   `yaml:"ignore"`
-	Output               OutputConfig               `yaml:"output"`
-	Parser               ParserConfig               `yaml:"parser"`
+	SeverityThreshold    string                     `yaml:"severity_threshold"`
 	FileStructure        FileStructureConfig        `yaml:"file_structure"`
 	LabelPattern         LabelPatternConfig         `yaml:"label_pattern"`
+	Ignore               []string                   `yaml:"ignore"`
+	Output               OutputConfig               `yaml:"output"`
 	NoManualTransactions NoManualTransactionsConfig `yaml:"no_manual_transactions"`
 	AtomicChangeset      AtomicChangesetConfig      `yaml:"atomic_changeset"`
-	SeverityThreshold    string                     `yaml:"severity_threshold"`
+	Parser               ParserConfig               `yaml:"parser"`
 }
 
 // RuleConfig represents configuration for a single rule.
 type RuleConfig struct {
-	Enabled         bool     `yaml:"enabled"`
 	Severity        string   `yaml:"severity"`
 	Mode            string   `yaml:"mode"`
 	ExcludePatterns []string `yaml:"exclude_patterns"`
+	Enabled         bool     `yaml:"enabled"`
 }
 
 // Mode constants for non-idempotent rule
@@ -55,70 +55,50 @@ type ParserConfig struct {
 
 // FileStructureConfig represents file organization rules configuration.
 type FileStructureConfig struct {
-	// Enabled determines if file structure rules should be enforced.
-	Enabled bool `yaml:"enabled"`
-	// SprintPattern is a regex pattern for matching sprint folders (e.g., "^v\\d+$").
-	// Default: "^v\\d+$" (matches v116, v117, etc.)
-	SprintPattern string `yaml:"sprint_pattern"`
-	// StructurePattern is a regex pattern for matching structure folders.
-	// Default: "(?i)^\\d+\\s*-\\s*structure$" (matches "0 - structure", "0-structure", etc.)
-	StructurePattern string `yaml:"structure_pattern"`
-	// DataPattern is a regex pattern for matching data folders.
-	// Default: "(?i)^\\d+\\s*-\\s*data$" (matches "1 - data", "1-data", etc.)
-	DataPattern string `yaml:"data_pattern"`
-	// ExcludePatterns are glob patterns to exclude from file structure rules.
-	// Default: ["**/init/**"] (excludes initialization scripts)
-	ExcludePatterns []string `yaml:"exclude_patterns"`
-	// SprintBasePath is the base path where sprint folders are located.
-	// If empty, assumes sprints can be anywhere. Example: "changelog/sprints"
-	SprintBasePath string `yaml:"sprint_base_path"`
+	SprintPattern    string   `yaml:"sprint_pattern"`
+	StructurePattern string   `yaml:"structure_pattern"`
+	DataPattern      string   `yaml:"data_pattern"`
+	SprintBasePath   string   `yaml:"sprint_base_path"`
+	ExcludePatterns  []string `yaml:"exclude_patterns"`
+	Enabled          bool     `yaml:"enabled"`
 }
 
 // LabelPatternConfig represents configuration for label pattern rule.
 type LabelPatternConfig struct {
-	// Enabled determines if label pattern validation is active.
-	Enabled bool `yaml:"enabled"`
-	// Severity is the severity level for violations (info, warning, critical).
-	Severity string `yaml:"severity"`
-	// Pattern is a single regex pattern for valid labels (e.g., "^v\\d+$").
-	Pattern string `yaml:"pattern"`
-	// Patterns is a list of regex patterns (alternative to single Pattern).
-	// Labels matching any pattern are considered valid.
-	Patterns []string `yaml:"patterns"`
-	// RequireLabel determines if changesets must have at least one label.
-	// Default: true
-	RequireLabel bool `yaml:"require_label"`
-	// ExcludePatterns are glob patterns to exclude from label validation.
-	// Default: ["**/init/**"]
+	Severity        string   `yaml:"severity"`
+	Pattern         string   `yaml:"pattern"`
+	Patterns        []string `yaml:"patterns"`
 	ExcludePatterns []string `yaml:"exclude_patterns"`
+	Enabled         bool     `yaml:"enabled"`
+	RequireLabel    bool     `yaml:"require_label"`
 }
 
 // NoManualTransactionsConfig represents configuration for no-manual-transactions rule.
 type NoManualTransactionsConfig struct {
-	// Enabled determines if the rule is active.
-	Enabled bool `yaml:"enabled"`
 	// Patterns are regex patterns to match transaction control keywords.
 	Patterns []string `yaml:"patterns"`
-	// CaseInsensitive determines if pattern matching is case-insensitive.
-	CaseInsensitive bool `yaml:"case_insensitive"`
 	// ExcludeChangeTypes are change types to skip (e.g., createProcedure).
 	ExcludeChangeTypes []string `yaml:"exclude_change_types"`
 	// ExcludePatterns are glob patterns to exclude from checking.
 	ExcludePatterns []string `yaml:"exclude_patterns"`
+	// Enabled determines if the rule is active.
+	Enabled bool `yaml:"enabled"`
+	// CaseInsensitive determines if pattern matching is case-insensitive.
+	CaseInsensitive bool `yaml:"case_insensitive"`
 }
 
 // AtomicChangesetConfig represents configuration for atomic-changeset rule.
 type AtomicChangesetConfig struct {
+	// ExcludePatterns are glob patterns to exclude from checking.
+	ExcludePatterns []string `yaml:"exclude_patterns"`
+	// MaxSQLStatements is the maximum number of SQL statements allowed in a single change.
+	MaxSQLStatements int `yaml:"max_sql_statements"`
 	// Enabled determines if the rule is active.
 	Enabled bool `yaml:"enabled"`
 	// AllowTableWithIndexes allows table creation with indexes as one operation.
 	AllowTableWithIndexes bool `yaml:"allow_table_with_indexes"`
 	// AllowTableWithConstraints allows table with inline constraints.
 	AllowTableWithConstraints bool `yaml:"allow_table_with_constraints"`
-	// MaxSQLStatements is the maximum number of SQL statements allowed in a single change.
-	MaxSQLStatements int `yaml:"max_sql_statements"`
-	// ExcludePatterns are glob patterns to exclude from checking.
-	ExcludePatterns []string `yaml:"exclude_patterns"`
 }
 
 // Default returns a Config with default values.
@@ -324,7 +304,7 @@ func InitConfig(path string) error {
 
 	// Write to file
 	//nolint:gosec // G306: Config file permissions are intentionally 0644 for readability
-	if err := os.WriteFile(path, data, 0644); err != nil {
+	if err := os.WriteFile(path, data, 0o600); err != nil {
 		return fmt.Errorf("failed to write configuration file: %w", err)
 	}
 

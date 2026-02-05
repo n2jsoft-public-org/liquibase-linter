@@ -9,11 +9,11 @@ import (
 
 func TestLabelPatternRule_Check(t *testing.T) {
 	tests := []struct {
-		name           string
 		config         *config.LabelPatternConfig
 		changelog      *parser.Changelog
-		wantViolations int
+		name           string
 		wantMessage    string
+		wantViolations int
 	}{
 		{
 			name: "valid - label matches pattern",
