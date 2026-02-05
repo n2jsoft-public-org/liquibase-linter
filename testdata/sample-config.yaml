@@ -34,4 +34,30 @@ parser:
   # Default: true
   follow_symlinks: true
 
+# File structure rules configuration
+file_structure:
+  # Enable file structure validation
+  enabled: false  # Set to true to enforce file structure rules
+  
+  # Sprint folder pattern (regex)
+  # Default matches v116, v117, etc.
+  sprint_pattern: "^v\\d+$"
+  
+  # Structure folder pattern (regex, case-insensitive)
+  # Default matches "0 - structure", "1-structure", etc.
+  structure_pattern: "(?i)^\\d+\\s*-\\s*structure$"
+  
+  # Data folder pattern (regex, case-insensitive)
+  # Default matches "1 - data", "2-data", etc.
+  data_pattern: "(?i)^\\d+\\s*-\\s*data$"
+  
+  # Patterns to exclude from file structure rules
+  # Use glob patterns with ** for recursive matching
+  exclude_patterns:
+    - "**/init/**"  # Exclude initialization scripts
+  
+  # Optional: specify base path for sprint folders
+  # If empty, sprints can be anywhere
+  sprint_base_path: ""
+
 severity_threshold: warning

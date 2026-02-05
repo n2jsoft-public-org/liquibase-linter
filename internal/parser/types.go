@@ -232,3 +232,115 @@ func (c *Change) GetChangeType() string {
 	}
 	return "unknown"
 }
+
+// IsDDLChange checks if a change is a Data Definition Language (DDL) operation.
+// DDL operations modify database structure (tables, indexes, constraints, etc.).
+func (c *Change) IsDDLChange() bool {
+	// Normalize change type for comparison
+	changeType := strings.ToLower(strings.TrimSpace(c.Type))
+	changeType = strings.ReplaceAll(changeType, " ", "")
+
+	// DDL change types
+	ddlTypes := map[string]bool{
+		"createtable":          true,
+		"droptable":            true,
+		"renametable":          true,
+		"addcolumn":            true,
+		"modifycolumn":         true,
+		"dropcolumn":           true,
+		"renamecolumn":         true,
+		"altersequence":        true,
+		"createindex":          true,
+		"dropindex":            true,
+		"createview":           true,
+		"dropview":             true,
+		"createprocedure":      true,
+		"dropprocedure":        true,
+		"addprimarykey":        true,
+		"dropprimarykey":       true,
+		"addunique":            true,
+		"adduniqueconstraint":  true,
+		"dropuniqueconstraint": true,
+		"addforeignkey":        true,
+		"dropforeignkey":       true,
+		"adddefaultvalue":      true,
+		"dropdefaultvalue":     true,
+		"addnotnull":           true,
+		"dropnotnull":          true,
+		"createsequence":       true,
+		"dropsequence":         true,
+		"createfunction":       true,
+		"dropfunction":         true,
+		"createtrigger":        true,
+		"droptrigger":          true,
+		"setcolumnremarks":     true,
+		"settableremarks":      true,
+	}
+
+	if ddlTypes[changeType] {
+		return true
+	}
+
+	// Check SQL content for DDL keywords
+	if c.SQL != "" {
+		sqlUpper := strings.ToUpper(strings.TrimSpace(c.SQL))
+		ddlKeywords := []string{
+			"CREATE TABLE", "DROP TABLE", "ALTER TABLE", "RENAME TABLE",
+			"CREATE INDEX", "DROP INDEX",
+			"CREATE VIEW", "DROP VIEW",
+			"CREATE PROCEDURE", "DROP PROCEDURE",
+			"CREATE FUNCTION", "DROP FUNCTION",
+			"CREATE TRIGGER", "DROP TRIGGER",
+			"CREATE SEQUENCE", "DROP SEQUENCE",
+			"ADD COLUMN", "DROP COLUMN", "MODIFY COLUMN", "ALTER COLUMN",
+			"ADD CONSTRAINT", "DROP CONSTRAINT",
+			"ADD PRIMARY KEY", "DROP PRIMARY KEY",
+			"ADD FOREIGN KEY", "DROP FOREIGN KEY",
+		}
+
+		for _, keyword := range ddlKeywords {
+			if strings.Contains(sqlUpper, keyword) {
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
+// IsDMLChange checks if a change is a Data Manipulation Language (DML) operation.
+// DML operations modify data within tables (INSERT, UPDATE, DELETE, etc.).
+func (c *Change) IsDMLChange() bool {
+	// Normalize change type for comparison
+	changeType := strings.ToLower(strings.TrimSpace(c.Type))
+	changeType = strings.ReplaceAll(changeType, " ", "")
+
+	// DML change types
+	dmlTypes := map[string]bool{
+		"insert":         true,
+		"update":         true,
+		"delete":         true,
+		"loaddata":       true,
+		"loadupdatedata": true,
+	}
+
+	if dmlTypes[changeType] {
+		return true
+	}
+
+	// Check SQL content for DML keywords
+	if c.SQL != "" {
+		sqlUpper := strings.ToUpper(strings.TrimSpace(c.SQL))
+
+		// Check if it starts with a DML keyword (to avoid matching CREATE, ALTER, etc.)
+		dmlKeywords := []string{"INSERT", "UPDATE", "DELETE", "MERGE"}
+
+		for _, keyword := range dmlKeywords {
+			if strings.HasPrefix(sqlUpper, keyword) {
+				return true
+			}
+		}
+	}
+
+	return false
+}

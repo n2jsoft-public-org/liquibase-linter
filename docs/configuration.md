@@ -79,7 +79,153 @@ parser:
   # Symlink loops are automatically detected and prevented
   follow_symlinks: true
 
+# File structure rules configuration
+file_structure:
+  # Enable file structure validation
+  enabled: false  # Disabled by default
+  
+  # Sprint folder pattern (regex)
+  # Default matches v116, v117, etc.
+  sprint_pattern: "^v\\d+$"
+  
+  # Structure folder pattern (regex, case-insensitive)
+  # Default matches "0 - structure", "1-structure", etc.
+  structure_pattern: "(?i)^\\d+\\s*-\\s*structure$"
+  
+  # Data folder pattern (regex, case-insensitive)
+  # Default matches "1 - data", "2-data", etc.
+  data_pattern: "(?i)^\\d+\\s*-\\s*data$"
+  
+  # Patterns to exclude from file structure rules
+  # Use glob patterns with ** for recursive matching
+  exclude_patterns:
+    - "**/init/**"  # Exclude initialization scripts
+    - "**/legacy/**"  # Optional: exclude legacy migrations
+  
+  # Optional: specify base path for sprint folders
+  # If empty, sprints can be anywhere
+  sprint_base_path: "changelog/sprints"
+
 # Minimum severity to report
+severity_threshold: warning  # Options: info, warning, critical
+```
+
+## Rule Configuration
+
+Each rule can be configured with the following properties:
+
+- **enabled**: Whether the rule is active (default: true)
+- **severity**: Rule severity level - `info`, `warning`, or `critical`
+
+### Available Rules
+
+- **sql-injection**: Detect SQL injection vulnerabilities
+- **hardcoded-credentials**: Find hardcoded passwords and API keys
+- **dangerous-operations**: Detect DROP/TRUNCATE without preconditions
+- **missing-rollback**: Ensure changesets have rollback scripts
+- **non-idempotent**: Detect non-idempotent changes
+- **sprint-folder-structure**: Enforce sprint-based folder organization
+- **ddl-location**: Ensure DDL changes are in structure directories
+- **dml-location**: Ensure DML changes are in data directories
+
+## File Structure Configuration
+
+The file structure rules help enforce consistent organization of database changes across sprints.
+
+### Enabling File Structure Rules
+
+```yaml
+file_structure:
+  enabled: true  # Must be explicitly enabled
+```
+
+### Sprint Pattern Customization
+
+Customize the regex pattern to match your sprint naming convention:
+
+```yaml
+file_structure:
+  # Examples:
+  sprint_pattern: "^v\\d+$"           # Matches: v116, v117, v200
+  sprint_pattern: "^sprint-\\d+$"     # Matches: sprint-116, sprint-200
+  sprint_pattern: "^release_\\d+\\.\\d+$"  # Matches: release_1.0, release_2.5
+```
+
+### Folder Organization Patterns
+
+Configure how structure and data folders should be named:
+
+```yaml
+file_structure:
+  # With numbers (default)
+  structure_pattern: "(?i)^\\d+\\s*-\\s*structure$"  # Matches: "0 - structure", "1-structure"
+  data_pattern: "(?i)^\\d+\\s*-\\s*data$"            # Matches: "1 - data", "2-data"
+  
+  # Without numbers
+  structure_pattern: "^structure$"  # Matches: "structure"
+  data_pattern: "^data$"            # Matches: "data"
+  
+  # Custom names
+  structure_pattern: "^ddl$"  # Matches: "ddl"
+  data_pattern: "^dml$"       # Matches: "dml"
+```
+
+### Exclude Patterns
+
+Exclude certain paths from file structure validation:
+
+```yaml
+file_structure:
+  exclude_patterns:
+    - "**/init/**"      # Initialization scripts
+    - "**/legacy/**"    # Legacy migrations
+    - "**/hotfix/**"    # Emergency hotfixes
+    - "**/rollback/**"  # Rollback scripts
+```
+
+### Example Organization
+
+With the default configuration:
+
+```
+db/changelog/
+  init/                      # ✅ Excluded from validation
+    0 - structure/
+      001-schema.sql
+    1 - data/
+      002-seed.sql
+  sprints/
+    v116/                    # ✅ Matches sprint pattern
+      0 - structure/         # ✅ Matches structure pattern
+        create_users.sql     # ✅ DDL in structure folder
+      1 - data/              # ✅ Matches data pattern
+        insert_users.sql     # ✅ DML in data folder
+    v117/
+      0 - structure/
+        alter_users.sql      # ✅ DDL in structure folder
+```
+
+### Common Validation Scenarios
+
+**Scenario 1: Sprint folder structure**
+```yaml
+# File: changelog/hotfix/tables.sql
+# ❌ Violation: Not in a sprint folder
+```
+
+**Scenario 2: DDL in wrong location**
+```yaml
+# File: changelog/sprints/v116/1 - data/create_table.sql
+# ❌ Violation: DDL (CREATE TABLE) in data directory
+```
+
+**Scenario 3: DML in wrong location**
+```yaml
+# File: changelog/sprints/v116/0 - structure/insert_data.sql
+# ❌ Violation: DML (INSERT) in structure directory
+```
+
+## Minimum severity to report
 severity_threshold: warning  # Options: info, warning, critical
 ```
 

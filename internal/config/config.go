@@ -16,6 +16,7 @@ type Config struct {
 	Ignore            []string              `yaml:"ignore"`
 	Output            OutputConfig          `yaml:"output"`
 	Parser            ParserConfig          `yaml:"parser"`
+	FileStructure     FileStructureConfig   `yaml:"file_structure"`
 	SeverityThreshold string                `yaml:"severity_threshold"`
 }
 
@@ -39,6 +40,27 @@ type ParserConfig struct {
 	// FollowSymlinks determines whether symlinks should be followed during file discovery.
 	// Default is true. Symlink loops are automatically detected and prevented.
 	FollowSymlinks bool `yaml:"follow_symlinks"`
+}
+
+// FileStructureConfig represents file organization rules configuration.
+type FileStructureConfig struct {
+	// Enabled determines if file structure rules should be enforced.
+	Enabled bool `yaml:"enabled"`
+	// SprintPattern is a regex pattern for matching sprint folders (e.g., "^v\\d+$").
+	// Default: "^v\\d+$" (matches v116, v117, etc.)
+	SprintPattern string `yaml:"sprint_pattern"`
+	// StructurePattern is a regex pattern for matching structure folders.
+	// Default: "(?i)^\\d+\\s*-\\s*structure$" (matches "0 - structure", "0-structure", etc.)
+	StructurePattern string `yaml:"structure_pattern"`
+	// DataPattern is a regex pattern for matching data folders.
+	// Default: "(?i)^\\d+\\s*-\\s*data$" (matches "1 - data", "1-data", etc.)
+	DataPattern string `yaml:"data_pattern"`
+	// ExcludePatterns are glob patterns to exclude from file structure rules.
+	// Default: ["**/init/**"] (excludes initialization scripts)
+	ExcludePatterns []string `yaml:"exclude_patterns"`
+	// SprintBasePath is the base path where sprint folders are located.
+	// If empty, assumes sprints can be anywhere. Example: "changelog/sprints"
+	SprintBasePath string `yaml:"sprint_base_path"`
 }
 
 // Default returns a Config with default values.
@@ -74,6 +96,14 @@ func Default() *Config {
 		Parser: ParserConfig{
 			MaxIncludeDepth: 10,
 			FollowSymlinks:  true,
+		},
+		FileStructure: FileStructureConfig{
+			Enabled:          true, // Enabled by default to enforce file structure organization
+			SprintPattern:    `^v\d+$`,
+			StructurePattern: `(?i)^\d+\s*-\s*structure$`,
+			DataPattern:      `(?i)^\d+\s*-\s*data$`,
+			ExcludePatterns:  []string{"**/init/**"},
+			SprintBasePath:   "",
 		},
 		SeverityThreshold: "warning",
 	}
@@ -145,6 +175,19 @@ func (c *Config) Validate() error {
 	// Validate parser configuration
 	if c.Parser.MaxIncludeDepth < 1 || c.Parser.MaxIncludeDepth > 100 {
 		return fmt.Errorf("max_include_depth must be between 1 and 100, got %d", c.Parser.MaxIncludeDepth)
+	}
+
+	// Validate file structure configuration
+	if c.FileStructure.Enabled {
+		if c.FileStructure.SprintPattern == "" {
+			return errors.New("file_structure.sprint_pattern cannot be empty when file structure rules are enabled")
+		}
+		if c.FileStructure.StructurePattern == "" {
+			return errors.New("file_structure.structure_pattern cannot be empty when file structure rules are enabled")
+		}
+		if c.FileStructure.DataPattern == "" {
+			return errors.New("file_structure.data_pattern cannot be empty when file structure rules are enabled")
+		}
 	}
 
 	return nil
