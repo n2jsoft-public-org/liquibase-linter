@@ -1,6 +1,6 @@
 # Rules Reference
 
-This document describes all available linting rules in the Liquibase Linter.
+This document provides an overview of all available linting rules in the Liquibase Linter.
 
 ## Rule Categories
 
@@ -11,460 +11,200 @@ This document describes all available linting rules in the Liquibase Linter.
 
 ## Security Rules
 
-### sql-injection
-
-**Severity**: Critical  
-**Category**: Security  
-**Status**: ✅ Implemented
-
-Detects potential SQL injection vulnerabilities in Liquibase changesets.
-
-**What it detects**:
-- String concatenation in SQL statements
-- Unescaped variable substitution
-- Dynamic SQL construction without parameterization
-
-**Example violation**:
-```xml
-<changeSet id="1" author="test">
-    <sql>
-        DELETE FROM users WHERE username = '${username}';
-    </sql>
-</changeSet>
-```
-
-**Correct usage**:
-```xml
-<changeSet id="1" author="test">
-    <delete tableName="users">
-        <where>username = :username</where>
-    </delete>
-</changeSet>
-```
-
-### hardcoded-credentials
-
-**Severity**: Critical  
-**Category**: Security  
-**Status**: ✅ Implemented
-
-Finds hardcoded passwords, API keys, and other sensitive credentials.
-
-**What it detects**:
-- Hardcoded passwords in CREATE USER statements
-- API keys and tokens in plain text
-- Connection strings with embedded credentials
-
-**Example violation**:
-```xml
-<changeSet id="1" author="test">
-    <sql>
-        CREATE USER 'app_user'@'localhost' IDENTIFIED BY 'password123';
-    </sql>
-</changeSet>
-```
-
-### dangerous-operations
-
-**Severity**: Critical  
-**Category**: Security  
-**Status**: ✅ Implemented
-
-Detects dangerous database operations that could cause data loss.
-
-**What it detects**:
-- DROP TABLE without preconditions
-- TRUNCATE TABLE without safety checks
-- DROP COLUMN operations
-- DROP DATABASE statements
-
-**Example violation**:
-```xml
-<changeSet id="1" author="test">
-    <dropTable tableName="important_data"/>
-</changeSet>
-```
-
-**Correct usage**:
-```xml
-<changeSet id="1" author="test">
-    <preConditions onFail="MARK_RAN">
-        <tableExists tableName="important_data"/>
-    </preConditions>
-    <dropTable tableName="important_data"/>
-</changeSet>
-```
-
-### privilege-escalation
-
-**Severity**: Critical  
-**Category**: Security  
-**Status**: ✅ Implemented
-
-Detects excessive privilege grants that could lead to security issues.
-
-**What it detects**:
-- GRANT ALL PRIVILEGES
-- Creating superusers
-- Granting permissions to wildcard users ('%')
+| Rule                                                    | Severity | Description                                     |
+| ------------------------------------------------------- | -------- | ----------------------------------------------- |
+| [sql-injection](rules/sql-injection.md)                 | Critical | Detects potential SQL injection vulnerabilities |
+| [hardcoded-credentials](rules/hardcoded-credentials.md) | Critical | Finds hardcoded passwords and API keys          |
+| [dangerous-operations](rules/dangerous-operations.md)   | Critical | Detects operations that could cause data loss   |
+| [privilege-escalation](rules/privilege-escalation.md)   | Critical | Detects excessive privilege grants              |
 
 ## Reliability Rules
 
-### missing-rollback
-
-**Severity**: Warning  
-**Category**: Reliability  
-**Status**: ✅ Implemented
-
-Ensures changesets have proper rollback scripts.
-
-**What it detects**:
-- Changesets without rollback definitions
-- Empty rollback blocks
-- Rollback marked as not supported
-
-**Example violation**:
-```xml
-<changeSet id="1" author="test">
-    <createTable tableName="users">
-        <!-- table definition -->
-    </createTable>
-</changeSet>
-```
-
-**Correct usage**:
-```xml
-<changeSet id="1" author="test">
-    <createTable tableName="users">
-        <!-- table definition -->
-    </createTable>
-    <rollback>
-        <dropTable tableName="users"/>
-    </rollback>
-</changeSet>
-```
-
-### non-idempotent
-
-**Severity**: Warning  
-**Category**: Reliability  
-**Status**: ✅ Implemented
-
-Detects operations that are not idempotent and may fail on re-run.
-
-**What it detects**:
-- CREATE TABLE without IF NOT EXISTS checks
-- INSERT without preconditions
-- ALTER TABLE ADD COLUMN without existence checks
-
-### missing-preconditions
-
-**Severity**: Warning  
-**Category**: Reliability  
-**Status**: ✅ Implemented
-
-Ensures risky operations have appropriate preconditions.
-
-**What it detects**:
-- ALTER TABLE without column existence checks
-- DROP operations without existence checks
-- Data manipulation without validation
+| Rule                                                    | Severity | Description                                     |
+| ------------------------------------------------------- | -------- | ----------------------------------------------- |
+| [missing-rollback](rules/missing-rollback.md)           | Warning  | Ensures changesets have proper rollback scripts |
+| [non-idempotent](rules/non-idempotent.md)               | Warning  | Detects operations that may fail on re-run      |
+| [missing-preconditions](rules/missing-preconditions.md) | Warning  | Ensures risky operations have preconditions     |
 
 ## Performance Rules
 
-### missing-indexes
-
-**Severity**: Info  
-**Category**: Performance  
-**Status**: ✅ Implemented
-
-Detects tables without proper indexes on foreign keys.
-
-**What it detects**:
-- Foreign key columns without indexes
-- Large tables without any indexes
-- Missing indexes on frequently queried columns
-
-### table-locks
-
-**Severity**: Warning  
-**Category**: Performance  
-**Status**: ✅ Implemented
-
-Identifies operations that may cause prolonged table locks.
-
-**What it detects**:
-- ALTER TABLE on large tables without online options
-- Rebuilding indexes on production tables
-- Adding NOT NULL constraints without defaults
-
-### large-data-operations
-
-**Severity**: Warning  
-**Category**: Performance  
-**Status**: ✅ Implemented
-
-Detects operations that manipulate large amounts of data.
-
-**What it detects**:
-- Unbounded UPDATE/DELETE statements
-- Large batch inserts
-- Full table scans
+| Rule                                                    | Severity | Description                                                |
+| ------------------------------------------------------- | -------- | ---------------------------------------------------------- |
+| [missing-indexes](rules/missing-indexes.md)             | Info     | Detects tables without proper indexes                      |
+| [table-locks](rules/table-locks.md)                     | Warning  | Identifies operations that may cause prolonged table locks |
+| [large-data-operations](rules/large-data-operations.md) | Warning  | Detects operations that manipulate large amounts of data   |
 
 ## Best Practices Rules
 
-### naming-conventions
-
-**Severity**: Info  
-**Category**: Best Practices  
-**Status**: ✅ Implemented
-
-Enforces consistent naming conventions for database objects.
-
-**What it checks**:
-- Table names (lowercase, snake_case)
-- Column names (consistent format)
-- Index naming patterns
-- Constraint naming patterns
-
-### changelog-organization
-
-**Severity**: Info  
-**Category**: Best Practices  
-**Status**: ✅ Implemented
-
-Ensures proper organization of changelog files.
-
-**What it checks**:
-- ChangeSet IDs are sequential
-- Author information is present
-- Contexts are used appropriately
-- Labels are meaningful
-
-### documentation
-
-**Severity**: Info  
-**Category**: Best Practices  
-**Status**: ✅ Implemented
-
-Ensures changesets are properly documented.
-
-**What it checks**:
-- Comments describing the changeset purpose
-- JIRA ticket references
-- Complex changes have explanations
+| Rule                                                      | Severity | Description                                    |
+| --------------------------------------------------------- | -------- | ---------------------------------------------- |
+| [naming-conventions](rules/naming-conventions.md)         | Info     | Enforces consistent naming conventions         |
+| [changelog-organization](rules/changelog-organization.md) | Info     | Ensures proper organization of changelog files |
+| [documentation](rules/documentation.md)                   | Info     | Ensures changesets are properly documented     |
 
 ## File Structure Rules
 
-### file-structure-sprint
-
-**Severity**: Critical  
-**Category**: Best Practices  
-**Status**: ✅ Implemented
-
-Enforces sprint-based directory organization for changelog files.
-
-**What it detects**:
-- Changelog files outside of sprint folders (e.g., `sprints/v116/`)
-- Sprint folders that don't match the configured pattern
-- Proper hierarchical organization of database changes
-
-**Configuration**:
-```yaml
-file_structure:
-  sprint_pattern: "^v\\d+$"  # Matches v116, v117, etc.
-  exclude_patterns:
-    - "**/init/**"  # Exclude initialization scripts
-```
-
-**Example violation**:
-```
-db/
-  changelog/
-    hotfix/           # ❌ Not in a sprint folder
-      tables.xml
-```
-
-**Correct usage**:
-```
-db/
-  changelog/
-    sprints/
-      v116/           # ✅ Matches sprint pattern
-        structure/
-          tables.xml
-    init/             # ✅ Excluded from validation
-      tables.xml
-```
-
-**Benefits**:
-- Clear versioning and release tracking
-- Easy identification of changes by sprint
-- Consistent organization across projects
-- Simplified rollback and deployment strategies
-
-### file-structure-ddl
-
-**Severity**: Critical  
-**Category**: Best Practices  
-**Status**: ✅ Implemented
-
-Enforces DDL (Data Definition Language) changes to be placed in structure directories.
-
-**What it detects**:
-- DDL operations (CREATE TABLE, ALTER TABLE, CREATE INDEX, etc.) in data directories
-- Schema changes mixed with data modifications
-- Structural changes in wrong directory hierarchy
-
-**DDL Operations Detected**:
-- Table operations: `createTable`, `dropTable`, `alterTable`, `renameTable`
-- Column operations: `addColumn`, `dropColumn`, `modifyColumn`, `renameColumn`
-- Index operations: `createIndex`, `dropIndex`
-- Constraint operations: `addPrimaryKey`, `addForeignKeyConstraint`, `addUniqueConstraint`
-- View operations: `createView`, `dropView`
-- Procedure operations: `createProcedure`, `dropProcedure`
-- Sequence operations: `createSequence`, `alterSequence`, `dropSequence`
-- Privilege operations: `grant`, `revoke`, `createUser`, `dropUser`
-
-**Configuration**:
-```yaml
-file_structure:
-  sprint_pattern: "^v\\d+$"
-  structure_pattern: "^\\d+ - structure$"  # Matches "0 - structure", "1 - structure"
-  exclude_patterns:
-    - "**/init/**"
-```
-
-**Example violation**:
-```xml
-<!-- File: db/changelog/sprints/v116/1 - data/tables.xml -->
-<changeSet id="1" author="dev">
-    <createTable tableName="users">  <!-- ❌ DDL in data directory -->
-        <column name="id" type="INT"/>
-    </createTable>
-</changeSet>
-```
-
-**Correct usage**:
-```xml
-<!-- File: db/changelog/sprints/v116/0 - structure/tables.xml -->
-<changeSet id="1" author="dev">
-    <createTable tableName="users">  <!-- ✅ DDL in structure directory -->
-        <column name="id" type="INT"/>
-    </createTable>
-</changeSet>
-```
-
-**Benefits**:
-- Clear separation of schema changes from data changes
-- Easier review of structural modifications
-- Reduced risk of data loss during schema changes
-- Better organization for database architects and DBAs
-
-**Note**: Generic `sql` change types are allowed in both directories since their content cannot be automatically classified.
-
-### file-structure-dml
-
-**Severity**: Critical  
-**Category**: Best Practices  
-**Status**: ✅ Implemented
-
-Enforces DML (Data Manipulation Language) changes to be placed in data directories.
-
-**What it detects**:
-- DML operations (INSERT, UPDATE, DELETE) in structure directories
-- Data modifications mixed with schema changes
-- Data changes in wrong directory hierarchy
-
-**DML Operations Detected**:
-- `insert` - Insert new rows
-- `update` - Update existing rows
-- `delete` - Delete rows
-- `loadData` - Load data from CSV/XML files
-- `loadUpdateData` - Load or update data from files
-
-**Configuration**:
-```yaml
-file_structure:
-  sprint_pattern: "^v\\d+$"
-  data_pattern: "^\\d+ - data$"  # Matches "0 - data", "1 - data"
-  exclude_patterns:
-    - "**/init/**"
-```
-
-**Example violation**:
-```xml
-<!-- File: db/changelog/sprints/v116/0 - structure/seed.xml -->
-<changeSet id="1" author="dev">
-    <insert tableName="users">  <!-- ❌ DML in structure directory -->
-        <column name="username" value="admin"/>
-    </insert>
-</changeSet>
-```
-
-**Correct usage**:
-```xml
-<!-- File: db/changelog/sprints/v116/1 - data/seed.xml -->
-<changeSet id="1" author="dev">
-    <insert tableName="users">  <!-- ✅ DML in data directory -->
-        <column name="username" value="admin"/>
-    </insert>
-</changeSet>
-```
-
-**Benefits**:
-- Clear separation of data changes from schema changes
-- Easier identification of data migrations
-- Better control over data seeding and updates
-- Reduced risk of accidental data modifications during schema changes
-
-**Note**: Generic `sql` change types are allowed in both directories since their content cannot be automatically classified.
-
-### Pattern Customization
-
-All file structure patterns can be customized to match your team's conventions:
-
-```yaml
-file_structure:
-  # Custom sprint pattern (e.g., "sprint-116" instead of "v116")
-  sprint_pattern: "^sprint-\\d+$"
-  
-  # Folder names without numbers
-  structure_pattern: "^structure$"
-  data_pattern: "^data$"
-  
-  # Multiple exclude patterns for migrations
-  exclude_patterns:
-    - "**/init/**"
-    - "**/legacy/**"
-    - "**/hotfix/**"
-```
+| Rule                                                    | Severity | Description                                  |
+| ------------------------------------------------------- | -------- | -------------------------------------------- |
+| [file-structure-sprint](rules/file-structure-sprint.md) | Critical | Enforces sprint-based directory organization |
+| [file-structure-ddl](rules/file-structure-ddl.md)       | Critical | Ensures DDL changes in structure directories |
+| [file-structure-dml](rules/file-structure-dml.md)       | Critical | Ensures DML changes in data directories      |
 
 ## Configuring Rules
 
-Rules can be enabled/disabled and their severity adjusted in the configuration file:
+All rules can be individually configured in your `.liquibase-linter.yaml` configuration file:
 
 ```yaml
 rules:
+  # Security rules
   sql-injection:
     enabled: true
     severity: critical
   
+  hardcoded-credentials:
+    enabled: true
+    severity: critical
+  
+  dangerous-operations:
+    enabled: true
+    severity: critical
+  
+  privilege-escalation:
+    enabled: true
+    severity: critical
+  
+  # Reliability rules
   missing-rollback:
     enabled: true
     severity: warning
   
+  non-idempotent:
+    enabled: true
+    severity: warning
+  
+  missing-preconditions:
+    enabled: true
+    severity: warning
+  
+  # Performance rules
+  missing-indexes:
+    enabled: true
+    severity: info
+  
+  table-locks:
+    enabled: true
+    severity: warning
+  
+  large-data-operations:
+    enabled: true
+    severity: warning
+  
+  # Best practices rules
   naming-conventions:
-    enabled: false  # Disable this rule
+    enabled: false  # Disable if you have custom conventions
+  
+  changelog-organization:
+    enabled: true
+    severity: info
+  
+  documentation:
+    enabled: true
+    severity: info
+  
+  # File structure rules
+  file-structure-sprint:
+    enabled: true
+    severity: critical
+  
+  file-structure-ddl:
+    enabled: true
+    severity: critical
+  
+  file-structure-dml:
+    enabled: true
+    severity: critical
+
+# File structure configuration
+file_structure:
+  sprint_pattern: "^v\\d+$"
+  structure_pattern: "^\\d+ - structure$"
+  data_pattern: "^\\d+ - data$"
+  exclude_patterns:
+    - "**/init/**"
 ```
 
-## Rule Severity Levels
+### Severity Levels
 
-- **Critical**: Security vulnerabilities and data loss risks
-- **Warning**: Reliability issues and potential problems
-- **Info**: Best practice violations and code quality issues
+- **Critical**: Security vulnerabilities and data loss risks - should fail builds
+- **Warning**: Reliability issues and potential problems - may fail builds
+- **Info**: Best practice violations and code quality issues - typically advisory
+
+### Disabling Rules
+
+To disable a rule, set `enabled: false`:
+
+```yaml
+rules:
+  naming-conventions:
+    enabled: false
+```
+
+### Adjusting Severity
+
+You can adjust the severity level of any rule:
+
+```yaml
+rules:
+  missing-rollback:
+    enabled: true
+    severity: critical  # Upgrade from warning to critical
+```
+
+## File Structure Configuration
+
+The file structure rules support flexible pattern matching:
+
+```yaml
+file_structure:
+  # Sprint folder pattern (regex)
+  sprint_pattern: "^v\\d+$"          # Matches: v116, v117, etc.
+  
+  # Structure directory pattern (regex)
+  structure_pattern: "^\\d+ - structure$"  # Matches: 0 - structure, 1 - structure
+  
+  # Data directory pattern (regex)
+  data_pattern: "^\\d+ - data$"      # Matches: 0 - data, 1 - data
+  
+  # Patterns to exclude from validation (glob patterns)
+  exclude_patterns:
+    - "**/init/**"      # Exclude initialization folders
+    - "**/legacy/**"    # Exclude legacy migrations
+    - "**/hotfix/**"    # Exclude hotfix folders
+```
+
+### Example Custom Patterns
+
+```yaml
+# For "sprint-116" naming
+file_structure:
+  sprint_pattern: "^sprint-\\d+$"
+  structure_pattern: "^ddl$"
+  data_pattern: "^dml$"
+
+# For release-based versioning
+file_structure:
+  sprint_pattern: "^release-\\d+\\.\\d+\\.\\d+$"
+  structure_pattern: "^schema$"
+  data_pattern: "^data$"
+```
 
 ## Next Steps
 
-- Configure rules in [configuration.md](configuration.md)
-- Set up [CI/CD integration](cicd.md)
+- Review individual rule documentation in the [rules/](rules/) directory
+- Set up your [configuration file](configuration.md)
+- Integrate with your [CI/CD pipeline](cicd.md)
+- See [usage examples](usage.md) for common scenarios
+
+## Rule Status
+
+All rules are ✅ **Implemented** and ready to use. Each rule has comprehensive tests and detailed documentation.
