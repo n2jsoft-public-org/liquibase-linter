@@ -122,14 +122,6 @@ Examples:
 		os.Exit(2)
 	}
 
-	// Inform user about auto-discovered config
-	if autoDiscovered {
-		fmt.Printf("Using configuration file: %s\n", *configPath)
-	}
-
-	// Print configuration summary
-	printConfigSummary(cfg, path)
-
 	// Override config with command-line flags
 	if *format != "text" {
 		cfg.Output.Format = *format
@@ -139,6 +131,16 @@ Examples:
 	}
 	if *severityThreshold != "warning" {
 		cfg.SeverityThreshold = *severityThreshold
+	}
+
+	// Inform user about auto-discovered config (only for non-JSON output)
+	if autoDiscovered && cfg.Output.Format != "json" {
+		fmt.Printf("Using configuration file: %s\n", *configPath)
+	}
+
+	// Print configuration summary (skip for JSON output)
+	if cfg.Output.Format != "json" {
+		printConfigSummary(cfg, path)
 	}
 
 	// Discover files to check
