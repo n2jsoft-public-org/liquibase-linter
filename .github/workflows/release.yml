@@ -40,20 +40,30 @@ jobs:
 
     - name: Build binaries
       run: |
+        # Extract version from tag (remove 'v' prefix)
+        VERSION=${GITHUB_REF_NAME#v}
+        COMMIT_HASH=$(git rev-parse --short HEAD)
+        BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+        LDFLAGS="-X main.version=${VERSION} -X main.commitHash=${COMMIT_HASH} -X main.buildDate=${BUILD_DATE}"
+        
+        echo "Building version: ${VERSION}"
+        echo "Commit: ${COMMIT_HASH}"
+        echo "Build date: ${BUILD_DATE}"
+        
         # Linux AMD64
-        GOOS=linux GOARCH=amd64 go build -o liquibase-linter-linux-amd64 ./cmd/liquibase-linter
+        GOOS=linux GOARCH=amd64 go build -ldflags "${LDFLAGS}" -o liquibase-linter-linux-amd64 ./cmd/liquibase-linter
         
         # Linux ARM64
-        GOOS=linux GOARCH=arm64 go build -o liquibase-linter-linux-arm64 ./cmd/liquibase-linter
+        GOOS=linux GOARCH=arm64 go build -ldflags "${LDFLAGS}" -o liquibase-linter-linux-arm64 ./cmd/liquibase-linter
         
         # macOS AMD64
-        GOOS=darwin GOARCH=amd64 go build -o liquibase-linter-darwin-amd64 ./cmd/liquibase-linter
+        GOOS=darwin GOARCH=amd64 go build -ldflags "${LDFLAGS}" -o liquibase-linter-darwin-amd64 ./cmd/liquibase-linter
         
         # macOS ARM64 (Apple Silicon)
-        GOOS=darwin GOARCH=arm64 go build -o liquibase-linter-darwin-arm64 ./cmd/liquibase-linter
+        GOOS=darwin GOARCH=arm64 go build -ldflags "${LDFLAGS}" -o liquibase-linter-darwin-arm64 ./cmd/liquibase-linter
         
         # Windows AMD64
-        GOOS=windows GOARCH=amd64 go build -o liquibase-linter-windows-amd64.exe ./cmd/liquibase-linter
+        GOOS=windows GOARCH=amd64 go build -ldflags "${LDFLAGS}" -o liquibase-linter-windows-amd64.exe ./cmd/liquibase-linter
         
         # Create checksums
         sha256sum liquibase-linter-* > checksums.txt
@@ -71,12 +81,19 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Build and push Docker image
-      uses: docker/build-push-action@v6
-      with:
-        context: .
-        push: true
-        tags: |
-          ghcr.io/${{ github.repository }}:${{ github.ref_name }}
-          ghcr.io/${{ github.repository }}:latest
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
+      run: |
+        VERSION=${GITHUB_REF_NAME#v}
+        COMMIT_HASH=$(git rev-parse --short HEAD)
+        BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+        
+        docker buildx build \
+          --build-arg VERSION=${VERSION} \
+          --build-arg COMMIT_HASH=${COMMIT_HASH} \
+          --build-arg BUILD_DATE=${BUILD_DATE} \
+          --platform linux/amd64,linux/arm64 \
+          --push \
+          --tag ghcr.io/${{ github.repository }}:${VERSION} \
+          --tag ghcr.io/${{ github.repository }}:latest \
+          --cache-from type=gha \
+          --cache-to type=gha,mode=max \
+          .

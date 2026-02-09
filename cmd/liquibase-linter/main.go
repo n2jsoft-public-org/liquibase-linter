@@ -13,7 +13,12 @@ import (
 	"github.com/n2jsoft-public-org/liquibase-linter/internal/rules"
 )
 
-const version = "0.1.0"
+// Build information, can be overridden at build time with -ldflags
+var (
+	version    = "dev"
+	buildDate  = ""
+	commitHash = ""
+)
 
 func main() {
 	if len(os.Args) < 2 {
@@ -29,7 +34,7 @@ func main() {
 	case "init":
 		initCmd()
 	case "version":
-		fmt.Printf("liquibase-linter version %s\n", version)
+		versionCmd()
 	case "help", "-h", "--help":
 		printUsage()
 	default:
@@ -665,4 +670,22 @@ Examples:
 	}
 
 	fmt.Printf("Configuration file created: %s\n", *outputPath)
+}
+
+func versionCmd() {
+	fmt.Printf("liquibase-linter version %s", version)
+	if commitHash != "" || buildDate != "" {
+		fmt.Print(" (")
+		if commitHash != "" {
+			fmt.Printf("commit: %s", commitHash)
+			if buildDate != "" {
+				fmt.Print(", ")
+			}
+		}
+		if buildDate != "" {
+			fmt.Printf("built: %s", buildDate)
+		}
+		fmt.Print(")")
+	}
+	fmt.Println()
 }
