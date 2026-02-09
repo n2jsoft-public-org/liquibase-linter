@@ -10,6 +10,10 @@ VERSION=dev
 build:
 	go build -ldflags "-X main.version=$(VERSION)" -o "$(BUILD_DIR)/$(BINARY_NAME)" ./cmd/liquibase-linter
 
+# Install the application to $GOPATH/bin
+install:
+	go install -ldflags "-X main.version=$(VERSION)" ./cmd/liquibase-linter
+
 # Run tests
 test:
 	go test -v -race -coverprofile=coverage.txt -covermode=atomic ./...
@@ -30,4 +34,4 @@ coverage:
 view-coverage:
 	go tool cover -html=coverage.txt
 
-.PHONY: build test lint clean coverage view-coverage
+.PHONY: build install test lint clean coverage view-coverage
