@@ -105,9 +105,18 @@ func (p *SQLParser) Parse(filePath string) (*Changelog, error) {
 
 		// Check for comment
 		if matches := commentRegex.FindStringSubmatch(line); matches != nil {
-			currentChangeSet.Comment = strings.TrimSpace(matches[1])
-			// Parse suppression directives from comment
-			currentChangeSet.SuppressedRules = ParseSuppressions(currentChangeSet.Comment)
+			newComment := strings.TrimSpace(matches[1])
+
+			// Accumulate comments (concatenate with newline if not first comment)
+			if currentChangeSet.Comment != "" {
+				currentChangeSet.Comment += "\n" + newComment
+			} else {
+				currentChangeSet.Comment = newComment
+			}
+
+			// Parse suppression directives from this comment line and merge with existing
+			newSuppressions := ParseSuppressions(newComment)
+			currentChangeSet.SuppressedRules = mergeSuppressions(currentChangeSet.SuppressedRules, newSuppressions)
 			continue
 		}
 
@@ -366,4 +375,31 @@ func (p *SQLParser) extractTableName(sql, changeType string) string {
 	}
 
 	return ""
+}
+
+// mergeSuppressions merges two lists of suppressed rules, removing duplicates.
+func mergeSuppressions(existing, newRules []string) []string {
+	if len(newRules) == 0 {
+		return existing
+	}
+	if len(existing) == 0 {
+		return newRules
+	}
+
+	// Create a map to track unique rules
+	seen := make(map[string]bool)
+	for _, rule := range existing {
+		seen[rule] = true
+	}
+
+	// Add new rules if not already present
+	result := append([]string{}, existing...)
+	for _, rule := range newRules {
+		if !seen[rule] {
+			result = append(result, rule)
+			seen[rule] = true
+		}
+	}
+
+	return result
 }
