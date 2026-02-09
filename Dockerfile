@@ -15,8 +15,15 @@ RUN go mod download
 # Copy source code
 COPY . .
 
+# Build arguments for version injection
+ARG VERSION=dev
+ARG COMMIT_HASH=
+ARG BUILD_DATE=
+
 # Build the application
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o liquibase-linter ./cmd/liquibase-linter
+RUN CGO_ENABLED=0 GOOS=linux go build \
+    -ldflags "-X main.version=${VERSION} -X main.commitHash=${COMMIT_HASH} -X main.buildDate=${BUILD_DATE}" \
+    -a -installsuffix cgo -o liquibase-linter ./cmd/liquibase-linter
 
 # Final stage
 FROM alpine:latest

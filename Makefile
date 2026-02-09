@@ -4,7 +4,7 @@
 # Variables
 BINARY_NAME=liquibase-linter
 BUILD_DIR=build
-VERSION=dev
+VERSION?=dev
 
 # Build the application
 build:
