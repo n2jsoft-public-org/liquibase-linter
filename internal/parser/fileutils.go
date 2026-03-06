@@ -94,7 +94,13 @@ func isChangelogFile(path string) bool {
 
 // MatchesResourceFilter checks if a file path matches a resource filter pattern.
 // Supports standard glob patterns plus ** for recursive directory matching.
+// Both the file path and pattern are normalized to use forward slashes for consistent matching.
 func MatchesResourceFilter(filePath, pattern string) (bool, error) {
+	// Normalize both file path and pattern to use forward slashes
+	// This ensures consistent matching across platforms
+	filePath = filepath.ToSlash(filePath)
+	pattern = filepath.ToSlash(pattern)
+
 	// Handle ** for recursive directory matching
 	if strings.Contains(pattern, "**") {
 		return matchesRecursivePattern(filePath, pattern)
@@ -112,7 +118,8 @@ func MatchesResourceFilter(filePath, pattern string) (bool, error) {
 	}
 
 	// Try matching the full path for patterns with directory separators
-	if strings.Contains(pattern, string(filepath.Separator)) {
+	// Use forward slash since paths and patterns are normalized
+	if strings.Contains(pattern, "/") {
 		matched, err = filepath.Match(pattern, filePath)
 		if err != nil {
 			return false, err
@@ -126,6 +133,8 @@ func MatchesResourceFilter(filePath, pattern string) (bool, error) {
 // Examples: **/*.sql matches any .sql file at any depth
 //
 //	v*/**/*.xml matches .xml files in subdirectories of directories starting with 'v'
+//
+// Note: Both filePath and pattern should already be normalized to forward slashes by the caller.
 func matchesRecursivePattern(filePath, pattern string) (bool, error) {
 	// Split pattern by **
 	parts := strings.Split(pattern, "**")
@@ -137,8 +146,9 @@ func matchesRecursivePattern(filePath, pattern string) (bool, error) {
 
 	// Handle single ** (most common case: **/*.ext)
 	if len(parts) == 2 {
-		prefix := strings.TrimSuffix(parts[0], string(filepath.Separator))
-		suffix := strings.TrimPrefix(parts[1], string(filepath.Separator))
+		// Use forward slash since paths are normalized
+		prefix := strings.TrimSuffix(parts[0], "/")
+		suffix := strings.TrimPrefix(parts[1], "/")
 
 		// Check if path starts with prefix (if any)
 		if prefix != "" {
@@ -158,8 +168,9 @@ func matchesRecursivePattern(filePath, pattern string) (bool, error) {
 			}
 			if !matched {
 				// Try matching with directory structure
-				pathParts := strings.Split(filePath, string(filepath.Separator))
-				suffixParts := strings.Split(suffix, string(filepath.Separator))
+				// Use forward slash for splitting since paths are normalized
+				pathParts := strings.Split(filePath, "/")
+				suffixParts := strings.Split(suffix, "/")
 
 				if len(pathParts) >= len(suffixParts) {
 					// Check if last N parts match suffix pattern

@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"path/filepath"
 	"testing"
 )
 
@@ -42,8 +43,8 @@ func TestGetRelativePath(t *testing.T) {
 				t.Errorf("GetRelativePath() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if !tt.wantErr && result != tt.expected {
-				t.Errorf("GetRelativePath() = %v, want %v", result, tt.expected)
+			if !tt.wantErr && result != filepath.FromSlash(tt.expected) {
+				t.Errorf("GetRelativePath() = %v, want %v", result, filepath.FromSlash(tt.expected))
 			}
 		})
 	}
@@ -80,8 +81,8 @@ func TestGetFileDir(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := GetFileDir(tt.filePath)
-			if result != tt.expected {
-				t.Errorf("GetFileDir() = %v, want %v", result, tt.expected)
+			if result != filepath.FromSlash(tt.expected) {
+				t.Errorf("GetFileDir() = %v, want %v", result, filepath.FromSlash(tt.expected))
 			}
 		})
 	}
@@ -113,8 +114,8 @@ func TestJoinPath(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := JoinPath(tt.elements...)
-			if result != tt.expected {
-				t.Errorf("JoinPath() = %v, want %v", result, tt.expected)
+			if result != filepath.FromSlash(tt.expected) {
+				t.Errorf("JoinPath() = %v, want %v", result, filepath.FromSlash(tt.expected))
 			}
 		})
 	}
