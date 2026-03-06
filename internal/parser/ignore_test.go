@@ -81,6 +81,22 @@ func TestParseContext_ShouldIgnore(t *testing.T) {
 			filePath:       filepath.Join(tmpDir, "changelog", "sprints", "v116", "main.sql"),
 			shouldIgnore:   false,
 		},
+		{
+			name:           "pattern with forward slashes matches Windows backslash path",
+			ignorePatterns: []string{"changelog/init/**"}, // Forward slashes in pattern (from YAML config)
+			basePath:       tmpDir,
+			// On Windows, filepath.Join creates: tmpDir\changelog\init\structure\tables.sql
+			// On Unix, filepath.Join creates: tmpDir/changelog/init/structure/tables.sql
+			filePath:     filepath.Join(tmpDir, "changelog", "init", "structure", "tables.sql"),
+			shouldIgnore: true, // Should match on BOTH Windows AND Unix
+		},
+		{
+			name:           "deep nested path with forward slash pattern",
+			ignorePatterns: []string{"changelog/init/**"},
+			basePath:       tmpDir,
+			filePath:       filepath.Join(tmpDir, "changelog", "init", "deep", "nested", "folders", "file.sql"),
+			shouldIgnore:   true,
+		},
 	}
 
 	for _, tt := range tests {
