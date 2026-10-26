@@ -17,7 +17,7 @@ This guide provides information for contributors and developers working on the L
 
 ### Prerequisites
 
-- Go 1.25 or higher
+- Go 1.27 or higher
 - Git
 - Make (optional, but recommended)
 

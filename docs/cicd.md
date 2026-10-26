@@ -137,7 +137,7 @@ workflows:
 Create a `Dockerfile`:
 
 ```dockerfile
-FROM golang:1.25-alpine AS builder
+FROM golang:1.27-alpine AS builder
 
 WORKDIR /build
 COPY . .

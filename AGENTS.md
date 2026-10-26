@@ -14,7 +14,7 @@
 
 ## Technology Stack
 
-- **Language**: Go 1.25+
+- **Language**: Go 1.27+
 - **Architecture**: CLI application
 - **Testing**: Go standard testing library with table-driven tests
 - **Build**: Go modules for dependency management
