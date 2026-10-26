@@ -73,3 +73,20 @@ func TestXMLParser_FileNotFound(t *testing.T) {
 		t.Error("Expected error for nonexistent file")
 	}
 }
+
+func TestXMLParser_Parse_PreconditionSQL(t *testing.T) {
+	parser := &XMLParser{}
+	changelog, err := parser.Parse(filepath.Join("..", "..", "testdata", "dbms-scope", "changelog.xml"))
+	if err != nil {
+		t.Fatalf("Parse() failed: %v", err)
+	}
+
+	cs := findChangeSet(t, changelog, "catalog-on-pg")
+	want := "SELECT COUNT(*) FROM sys.tables WHERE name = 'c'"
+	if len(cs.PreconditionSQL) != 1 || cs.PreconditionSQL[0] != want {
+		t.Errorf("PreconditionSQL = %q, want [%q]", cs.PreconditionSQL, want)
+	}
+	if len(cs.DBMSList) != 1 || cs.DBMSList[0] != "postgresql" {
+		t.Errorf("DBMSList = %q, want [postgresql]", cs.DBMSList)
+	}
+}

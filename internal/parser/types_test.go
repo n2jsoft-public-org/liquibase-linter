@@ -318,3 +318,33 @@ func TestChangeSet_IsSuppressed(t *testing.T) {
 		})
 	}
 }
+
+func TestChangeSet_ReachesDBMS(t *testing.T) {
+	tests := []struct {
+		name   string
+		engine string
+		dbms   []string
+		want   bool
+	}{
+		{name: "no dbms", dbms: nil, engine: "postgresql", want: true},
+		{name: "other engine", dbms: []string{"mssql"}, engine: "postgresql", want: false},
+		{name: "same engine", dbms: []string{"postgresql"}, engine: "postgresql", want: true},
+		{name: "engine in list", dbms: []string{"mssql", "postgresql"}, engine: "postgresql", want: true},
+		{name: "all", dbms: []string{"all"}, engine: "postgresql", want: true},
+		{name: "none", dbms: []string{"none"}, engine: "postgresql", want: false},
+		{name: "negated other engine", dbms: []string{"!mssql"}, engine: "postgresql", want: true},
+		{name: "negated engine", dbms: []string{"!postgresql"}, engine: "postgresql", want: false},
+		{name: "negated all", dbms: []string{"!all"}, engine: "postgresql", want: false},
+		{name: "case and spaces", dbms: []string{" MSSQL"}, engine: "mssql", want: true},
+		{name: "positive and negation", dbms: []string{"all", "!postgresql"}, engine: "postgresql", want: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cs := &ChangeSet{DBMSList: tt.dbms}
+			if got := cs.ReachesDBMS(tt.engine); got != tt.want {
+				t.Errorf("ReachesDBMS(%q) with dbms %q = %v, want %v", tt.engine, tt.dbms, got, tt.want)
+			}
+		})
+	}
+}

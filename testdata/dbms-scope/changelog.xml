@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog">
+    <changeSet id="catalog-on-pg" author="alice" dbms="postgresql">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM sys.tables WHERE name = 'c'</sqlCheck>
+        </preConditions>
+        <sql>CREATE TABLE c (id INT);</sql>
+    </changeSet>
+</databaseChangeLog>

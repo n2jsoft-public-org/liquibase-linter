@@ -2,6 +2,8 @@ package parser
 
 import (
 	"path/filepath"
+	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -243,4 +245,56 @@ func containsRule(rules []string, rule string) bool {
 		}
 	}
 	return false
+}
+
+func TestSQLParser_Parse_PreconditionSQLAndLineNumber(t *testing.T) {
+	parser := &SQLParser{}
+	changelog, err := parser.Parse(filepath.Join("..", "..", "testdata", "dbms-scope", "changelog.sql"))
+	if err != nil {
+		t.Fatalf("Parse() failed: %v", err)
+	}
+
+	tests := []struct {
+		id       string
+		wantSQL  []string
+		wantLine int
+	}{
+		{id: "no-dbms", wantSQL: nil, wantLine: 3},
+		{id: "catalog-on-pg", wantSQL: []string{"SELECT COUNT(*) FROM sys.tables WHERE name = 'c'"}, wantLine: 9},
+		{id: "catalog-on-mssql", wantSQL: []string{"SELECT COUNT(*) FROM sys.tables WHERE name = 'd'"}, wantLine: 14},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.id, func(t *testing.T) {
+			cs := findChangeSet(t, changelog, tt.id)
+			if !reflect.DeepEqual(cs.PreconditionSQL, tt.wantSQL) {
+				t.Errorf("PreconditionSQL = %q, want %q", cs.PreconditionSQL, tt.wantSQL)
+			}
+			if cs.LineNumber != tt.wantLine {
+				t.Errorf("LineNumber = %d, want %d", cs.LineNumber, tt.wantLine)
+			}
+			for _, change := range cs.Changes {
+				if strings.Contains(change.SQL, "precondition") {
+					t.Errorf("precondition line leaked into change SQL: %q", change.SQL)
+				}
+			}
+		})
+	}
+
+	// The --preconditions line must still be parsed alongside the SQL check.
+	if cs := findChangeSet(t, changelog, "catalog-on-pg"); cs.Preconditions == nil || cs.Preconditions.OnFail != "MARK_RAN" {
+		t.Errorf("Preconditions = %+v, want onFail MARK_RAN", cs.Preconditions)
+	}
+}
+
+// findChangeSet returns the changeset with the given ID or fails the test.
+func findChangeSet(t *testing.T, changelog *Changelog, id string) *ChangeSet {
+	t.Helper()
+	for i := range changelog.ChangeSets {
+		if changelog.ChangeSets[i].ID == id {
+			return &changelog.ChangeSets[i]
+		}
+	}
+	t.Fatalf("changeset %q not found", id)
+	return nil
 }

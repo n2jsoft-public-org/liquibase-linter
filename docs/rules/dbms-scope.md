@@ -2,7 +2,7 @@
 
 **Category**: Reliability  
 **Severity**: Critical (default)  
-**Status**: 📋 Planned, see [roadmap/dbms-scope.md](../../roadmap/dbms-scope.md)
+**Status**: Opt-in (disabled by default)
 
 ## What It Detects
 
@@ -15,8 +15,6 @@ each changeset:
 3. **Engine-specific precondition SQL**: the changeset runs on an engine, and one of its `sqlCheck`
    preconditions matches a pattern configured as unsupported on that engine (for example `sys.*` or
    `OBJECT_ID()` on PostgreSQL).
-
-The rule is disabled by default. Enable it for changelogs shared by more than one engine.
 
 ## Why It Matters
 
@@ -91,11 +89,6 @@ CREATE TABLE users_archive (id INT PRIMARY KEY);
 ## Configuration
 
 ```yaml
-rules:
-  dbms-scope:
-    enabled: true
-    severity: critical  # info, warning, critical
-
 dbms_scope:
   enabled: true
   require_dbms: true
@@ -107,6 +100,12 @@ dbms_scope:
       - '(?i)(^|[^a-z0-9_])sys\.'
       - '(?i)\bobject_id\s*\('
       - '(?i)\bcol_length\s*\('
+
+# Optional: change the severity (keep enabled: true, an entry without it disables the rule)
+rules:
+  dbms-scope:
+    enabled: true
+    severity: warning
 ```
 
 ### Configuration Options
@@ -114,31 +113,35 @@ dbms_scope:
 - **enabled**: Enable the rule (default: `false`)
 - **require_dbms**: Report changesets without a `dbms` attribute (default: `true`)
 - **allowed_values**: Engine names accepted in `dbms`, in addition to `all` and `none`. Default:
-  Liquibase's short names (`cockroachdb`, `db2`, `derby`, `h2`, `hsqldb`, `informix`, `mariadb`,
-  `mssql`, `mysql`, `oracle`, `postgresql`, `snowflake`, `sqlite`, `sybase`). Restrict it to the
-  engines you actually target to catch more typos.
+  every short name listed in the
+  [Liquibase dbms documentation](https://docs.liquibase.com/concepts/changelogs/attributes/dbms.html).
+  Restrict it to the engines you actually target to catch more typos.
 - **forbidden_precondition_patterns**: Map of engine name to regular expressions (Go syntax). A
-  changeset that runs on that engine must not have precondition SQL matching any of them.
-  Default: none.
+  changeset that runs on that engine must not have precondition SQL matching any of them. Invalid
+  regular expressions are rejected when the configuration is loaded. Default: none.
 - **exclude_patterns**: Glob patterns for files to skip (optional)
+
+The global `ignore` hides files from every rule. A folder that other rules skip but that must still
+declare `dbms` (a baseline, for instance) belongs in those rules' `exclude_patterns`, not in `ignore`.
 
 ## Limitations
 
 - Precondition SQL is read from formatted SQL `--precondition-sql-check`, XML `<sqlCheck>` and
-  YAML/JSON `sqlCheck`. An XML `<sqlCheck>` nested inside `<and>`, `<or>` or `<not>` is not checked.
+  YAML/JSON `sqlCheck`. A `sqlCheck` nested inside `and`, `or` or `not` is not checked.
 - Only the changeset `dbms` attribute is read, not a `dbms` precondition.
+- Violations point at the changeset header line for formatted SQL only.
 
 ## Suppression
 
 ```sql
 --changeset alice:legacy
---comment: liquibase-linter:disable dbms-scope Applied before the PostgreSQL migration, kept as is
+--comment: liquibase-linter:disable dbms-scope Applied before the engine migration, kept as is
 ```
 
 See [Rule Suppression](../suppression.md).
 
 ## See Also
 
-- [DBMS Twin](dbms-twin.md) - Requires a counterpart changeset for a second engine
+- [DBMS Twin](dbms-twin.md) - Planned rule requiring a counterpart changeset for a second engine
 - [No IF EXISTS](no-if-exists.md) - Engine-specific existence checks in the SQL body
 - [Liquibase dbms attribute](https://docs.liquibase.com/concepts/changelogs/attributes/dbms.html)

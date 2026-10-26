@@ -160,6 +160,27 @@ rules:
 
 For more details, see the [non-idempotent rule documentation](rules/non-idempotent.md).
 
+### DBMS Scope Rule Configuration
+
+The `dbms-scope` rule is disabled by default. Enable it for changelogs shared by several database engines:
+
+```yaml
+dbms_scope:
+  enabled: true
+  require_dbms: true                      # report changesets without dbms
+  allowed_values: [mssql, postgresql]     # default: every Liquibase engine name
+  forbidden_precondition_patterns:        # engine -> regexes its precondition SQL must not match
+    postgresql:
+      - '(?i)(^|[^a-z0-9_])sys\.'
+      - '(?i)\bobject_id\s*\('
+  exclude_patterns:
+    - "changelog/generated/**"
+```
+
+To change its severity (default: `critical`), add it under `rules` with `enabled: true`.
+
+For more details, see the [dbms-scope rule documentation](rules/dbms-scope.md).
+
 ## File Structure Configuration
 
 The file structure rules help enforce consistent organization of database changes across sprints.

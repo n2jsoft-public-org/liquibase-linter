@@ -139,7 +139,9 @@ type ChangeSet struct {
 	Changes         []Change
 	Labels          []string
 	DBMSList        []string
+	PreconditionSQL []string // SQL of every sqlCheck precondition, in declaration order
 	SuppressedRules []string // Rules disabled via inline comments (e.g., liquibase-linter:disable rule-id)
+	LineNumber      int      // Line of the changeset header (formatted SQL only; 0 otherwise)
 	RunAlways       bool
 	RunOnChange     bool
 	FailOnError     bool
@@ -229,6 +231,36 @@ func (cs *ChangeSet) HasRollback() bool {
 // HasPreconditions checks if a changeset has preconditions.
 func (cs *ChangeSet) HasPreconditions() bool {
 	return cs.Preconditions != nil
+}
+
+// ReachesDBMS reports whether Liquibase runs the changeset on the given engine,
+// according to its dbms attribute: no dbms or only negations reach every engine
+// not excluded, "none" reaches nothing, and "!engine" or "!all" excludes the engine.
+func (cs *ChangeSet) ReachesDBMS(engine string) bool {
+	engine = strings.ToLower(strings.TrimSpace(engine))
+	named, hasPositive := false, false
+
+	for _, value := range cs.DBMSList {
+		value = strings.ToLower(strings.TrimSpace(value))
+		if value == "" {
+			continue
+		}
+		if name, negated := strings.CutPrefix(value, "!"); negated {
+			if name == engine || name == "all" {
+				return false
+			}
+			continue
+		}
+		hasPositive = true
+		if value == "none" {
+			return false
+		}
+		if value == engine || value == "all" {
+			named = true
+		}
+	}
+
+	return named || !hasPositive
 }
 
 // IsSuppressed checks if a specific rule is suppressed for this changeset.

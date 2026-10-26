@@ -1,0 +1,13 @@
+databaseChangeLog:
+  - changeSet:
+      id: catalog-on-pg
+      author: alice
+      dbms: postgresql
+      preConditions:
+        - onFail: MARK_RAN
+        - sqlCheck:
+            expectedResult: 0
+            sql: SELECT COUNT(*) FROM sys.tables WHERE name = 'c'
+      changes:
+        - sql:
+            sql: CREATE TABLE c (id INT);
