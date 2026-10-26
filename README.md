@@ -25,6 +25,10 @@ Database migrations are critical infrastructure code that often contains securit
 ## Installation
 
 ```bash
+# macOS and Linux
+brew install --cask n2jsoft-public-org/tap/liquibase-linter
+
+# Any platform with Go
 go install github.com/n2jsoft-public-org/liquibase-linter/cmd/liquibase-linter@latest
 ```
 

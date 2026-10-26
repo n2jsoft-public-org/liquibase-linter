@@ -48,6 +48,26 @@ signs:
 changelog:
   disable: true
 
+# brew install --cask n2jsoft-public-org/tap/liquibase-linter
+homebrew_casks:
+  - binaries:
+      - liquibase-linter
+    homepage: https://github.com/n2jsoft-public-org/liquibase-linter
+    description: Lint Liquibase changelogs for security, reliability and best-practice issues
+    license: MIT
+    repository:
+      owner: n2jsoft-public-org
+      name: homebrew-tap
+      token: "{{ .Env.TAP_GITHUB_TOKEN }}"
+    commit_msg_template: "liquibase-linter {{ .Tag }}"
+    # The binaries are not notarized: without this, macOS refuses to run them.
+    hooks:
+      post:
+        install_steps: |
+          on_macos do
+            run "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "{{ .StagedPath }}"]
+          end
+
 # semantic-release creates the release as a draft, named after its tag, with the notes
 # (.releaserc.yaml). GoReleaser attaches the files to that draft, then publishes it.
 release:
