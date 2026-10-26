@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"regexp"
 
 	"gopkg.in/yaml.v3"
 )
@@ -14,11 +15,12 @@ import (
 type Config struct {
 	Rules                map[string]RuleConfig      `yaml:"rules"`
 	SeverityThreshold    string                     `yaml:"severity_threshold"`
-	FileStructure        FileStructureConfig        `yaml:"file_structure"`
-	LabelPattern         LabelPatternConfig         `yaml:"label_pattern"`
 	Ignore               []string                   `yaml:"ignore"`
 	Output               OutputConfig               `yaml:"output"`
+	FileStructure        FileStructureConfig        `yaml:"file_structure"`
+	LabelPattern         LabelPatternConfig         `yaml:"label_pattern"`
 	NoManualTransactions NoManualTransactionsConfig `yaml:"no_manual_transactions"`
+	DBMSScope            DBMSScopeConfig            `yaml:"dbms_scope"`
 	AtomicChangeset      AtomicChangesetConfig      `yaml:"atomic_changeset"`
 	Parser               ParserConfig               `yaml:"parser"`
 }
@@ -99,6 +101,30 @@ type AtomicChangesetConfig struct {
 	AllowTableWithIndexes bool `yaml:"allow_table_with_indexes"`
 	// AllowTableWithConstraints allows table with inline constraints.
 	AllowTableWithConstraints bool `yaml:"allow_table_with_constraints"`
+}
+
+// DBMSScopeConfig represents configuration for dbms-scope rule.
+type DBMSScopeConfig struct {
+	// ForbiddenPreconditionPatterns maps an engine name to regex patterns that the precondition
+	// SQL of a changeset running on that engine must not match.
+	ForbiddenPreconditionPatterns map[string][]string `yaml:"forbidden_precondition_patterns"`
+	// AllowedValues are the engine names accepted in dbms, in addition to "all" and "none".
+	AllowedValues []string `yaml:"allowed_values"`
+	// ExcludePatterns are glob patterns to exclude from checking.
+	ExcludePatterns []string `yaml:"exclude_patterns"`
+	// Enabled determines if the rule is active.
+	Enabled bool `yaml:"enabled"`
+	// RequireDBMS reports changesets without a dbms attribute.
+	RequireDBMS bool `yaml:"require_dbms"`
+}
+
+// LiquibaseDBMSNames are the database short names Liquibase accepts in a dbms attribute.
+var LiquibaseDBMSNames = []string{
+	"aerospike", "asany", "bigquery", "cassandra", "cloudspanner", "cockroachdb", "cosmosdb",
+	"databricks", "db2", "db2i", "db2z", "derby", "dynamodb", "edb", "firebird", "h2", "hana",
+	"hsqldb", "informix", "ingres", "mariadb", "maxdb", "mongodb", "mssql", "mysql", "neo4j",
+	"oracle", "postgresql", "redshift", "snowflake", "sqlite", "sybase", "teradata", "vertica",
+	"yugabytedb",
 }
 
 // Default returns a Config with default values.
@@ -191,6 +217,11 @@ func Default() *Config {
 			MaxSQLStatements:          1,
 			ExcludePatterns:           []string{"**/init/**"},
 		},
+		DBMSScope: DBMSScopeConfig{
+			Enabled:       false, // Disabled by default (opt-in, for changelogs shared by several engines)
+			RequireDBMS:   true,
+			AllowedValues: append([]string{}, LiquibaseDBMSNames...),
+		},
 		SeverityThreshold: "warning",
 	}
 }
@@ -274,6 +305,15 @@ func (c *Config) Validate() error {
 		}
 		if c.FileStructure.DataPattern == "" {
 			return errors.New("file_structure.data_pattern cannot be empty when file structure rules are enabled")
+		}
+	}
+
+	// Validate dbms scope patterns, so the rule never has to deal with an invalid regex
+	for engine, patterns := range c.DBMSScope.ForbiddenPreconditionPatterns {
+		for _, pattern := range patterns {
+			if _, err := regexp.Compile(pattern); err != nil {
+				return fmt.Errorf("invalid dbms_scope.forbidden_precondition_patterns.%s pattern %q: %w", engine, pattern, err)
+			}
 		}
 	}
 

@@ -4,6 +4,7 @@ package parser
 import (
 	"encoding/json"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"strings"
@@ -244,9 +245,35 @@ func (p *YAMLParser) parseChangeSet(data any, filePath string) (ChangeSet, error
 			return ChangeSet{}, err
 		}
 		cs.Preconditions = pc
+		cs.PreconditionSQL = preconditionSQLChecks(preconditions)
 	}
 
 	return cs, nil
+}
+
+// preconditionSQLChecks returns the SQL of every top-level sqlCheck in a preConditions
+// element, whether written as a list of objects or as a single object.
+func preconditionSQLChecks(data any) []string {
+	items, isList := data.([]any)
+	if !isList {
+		items = []any{data}
+	}
+
+	var sqls []string
+	for _, item := range items {
+		itemMap, ok := item.(map[string]any)
+		if !ok {
+			continue
+		}
+		check, ok := itemMap["sqlCheck"].(map[string]any)
+		if !ok {
+			continue
+		}
+		if sql, ok := check["sql"].(string); ok && strings.TrimSpace(sql) != "" {
+			sqls = append(sqls, strings.TrimSpace(sql))
+		}
+	}
+	return sqls
 }
 
 // parseRollback parses rollback instructions
@@ -295,9 +322,20 @@ func (p *YAMLParser) parseRollback(data any, filePath, changesetID string) (*Rol
 
 // parsePreconditions parses precondition element
 func (p *YAMLParser) parsePreconditions(data any, _ /* filePath */, _ /* changesetID */ string) (*Precondition, error) {
+	// Liquibase writes preConditions as a list of single-key objects; merge it into one object.
+	if items, isList := data.([]any); isList {
+		merged := make(map[string]any)
+		for _, item := range items {
+			if itemMap, ok := item.(map[string]any); ok {
+				maps.Copy(merged, itemMap)
+			}
+		}
+		data = merged
+	}
+
 	pcMap, ok := data.(map[string]any)
 	if !ok {
-		return nil, fmt.Errorf("preconditions must be an object")
+		return nil, fmt.Errorf("preconditions must be an object or a list")
 	}
 
 	pc := &Precondition{

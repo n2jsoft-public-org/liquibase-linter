@@ -289,3 +289,54 @@ func TestInitConfig_FileExists(t *testing.T) {
 		t.Fatal("Expected error when file already exists, got nil")
 	}
 }
+
+func TestDefault_DBMSScope(t *testing.T) {
+	cfg := Default()
+
+	if cfg.DBMSScope.Enabled {
+		t.Error("dbms_scope should be disabled by default")
+	}
+	if !cfg.DBMSScope.RequireDBMS {
+		t.Error("dbms_scope.require_dbms should default to true")
+	}
+	if len(cfg.DBMSScope.AllowedValues) != len(LiquibaseDBMSNames) {
+		t.Errorf("dbms_scope.allowed_values has %d names, want %d", len(cfg.DBMSScope.AllowedValues), len(LiquibaseDBMSNames))
+	}
+}
+
+func TestLoad_DBMSScopeConfig(t *testing.T) {
+	configPath := filepath.Join(t.TempDir(), "config.yaml")
+	content := `dbms_scope:
+  enabled: true
+  allowed_values: [mssql, postgresql]
+  forbidden_precondition_patterns:
+    postgresql:
+      - '(?i)\bobject_id\s*\('
+`
+	if err := os.WriteFile(configPath, []byte(content), 0o600); err != nil {
+		t.Fatalf("Failed to write config: %v", err)
+	}
+
+	cfg, err := Load(configPath)
+	if err != nil {
+		t.Fatalf("Load() failed: %v", err)
+	}
+	if !cfg.DBMSScope.Enabled || !cfg.DBMSScope.RequireDBMS {
+		t.Errorf("DBMSScope = %+v, want enabled with require_dbms kept from defaults", cfg.DBMSScope)
+	}
+	if len(cfg.DBMSScope.AllowedValues) != 2 {
+		t.Errorf("AllowedValues = %v, want [mssql postgresql]", cfg.DBMSScope.AllowedValues)
+	}
+	if len(cfg.DBMSScope.ForbiddenPreconditionPatterns["postgresql"]) != 1 {
+		t.Errorf("ForbiddenPreconditionPatterns = %v, want one postgresql pattern", cfg.DBMSScope.ForbiddenPreconditionPatterns)
+	}
+}
+
+func TestValidate_InvalidDBMSScopePattern(t *testing.T) {
+	cfg := Default()
+	cfg.DBMSScope.ForbiddenPreconditionPatterns = map[string][]string{"postgresql": {"("}}
+
+	if err := cfg.Validate(); err == nil {
+		t.Fatal("Expected validation error for invalid dbms_scope pattern, got nil")
+	}
+}

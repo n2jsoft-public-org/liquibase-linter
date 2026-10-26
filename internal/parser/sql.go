@@ -18,6 +18,9 @@ var (
 	rollbackRegex = regexp.MustCompile(`^--\s*rollback\s+(.*)$`)
 	// Matches precondition marker like: --preconditions onFail:MARK_RAN
 	preconditionsRegex = regexp.MustCompile(`^--\s*preconditions?\s+(.*)$`)
+	// Matches SQL check precondition like: --precondition-sql-check expectedResult:0 SELECT ...
+	// The leading key:value options are skipped; the second group is the SQL.
+	preconditionSQLCheckRegex = regexp.MustCompile(`^--\s*precondition-sql-check\s+((?:\w+:\S+\s+)*)(.*)$`)
 	// Matches comment lines (both --comment text and --comment: text)
 	commentRegex = regexp.MustCompile(`^--\s*comment:?\s*(.*)$`)
 	// Matches label marker like: --labels: label1, label2
@@ -55,9 +58,11 @@ func (p *SQLParser) Parse(filePath string) (*Changelog, error) {
 	var currentSQL strings.Builder
 	var rollbackSQL string
 	var inRollback bool
+	lineNumber := 0
 
 	for scanner.Scan() {
 		line := scanner.Text()
+		lineNumber++
 
 		// Check for changeset header
 		if matches := changesetRegex.FindStringSubmatch(line); matches != nil {
@@ -72,6 +77,7 @@ func (p *SQLParser) Parse(filePath string) (*Changelog, error) {
 				Author:        strings.TrimSpace(matches[1]),
 				ID:            strings.TrimSpace(matches[2]),
 				FilePath:      filePath,
+				LineNumber:    lineNumber,
 				Changes:       make([]Change, 0),
 				Preconditions: nil,
 			}
@@ -94,6 +100,14 @@ func (p *SQLParser) Parse(filePath string) (*Changelog, error) {
 		if matches := rollbackRegex.FindStringSubmatch(line); matches != nil {
 			inRollback = true
 			rollbackSQL = strings.TrimSpace(matches[1])
+			continue
+		}
+
+		// Check for SQL check preconditions
+		if matches := preconditionSQLCheckRegex.FindStringSubmatch(line); matches != nil {
+			if sql := strings.TrimSpace(matches[2]); sql != "" {
+				currentChangeSet.PreconditionSQL = append(currentChangeSet.PreconditionSQL, sql)
+			}
 			continue
 		}
 

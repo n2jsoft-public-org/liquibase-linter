@@ -192,6 +192,11 @@ Examples:
 		registry.Register(rules.NewAtomicChangesetRule(&cfg.AtomicChangeset))
 	}
 
+	// Register dbms-scope rule (only if enabled in config)
+	if cfg.DBMSScope.Enabled {
+		registry.Register(rules.NewDBMSScopeRule(&cfg.DBMSScope))
+	}
+
 	// Register file structure rules (only if enabled in config)
 	if cfg.FileStructure.Enabled {
 		registry.Register(rules.NewSprintFolderStructureRule(&cfg.FileStructure))

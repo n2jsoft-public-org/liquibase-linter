@@ -316,6 +316,11 @@ func (p *XMLParser) convertChangeSet(xmlCS *xmlChangeSet, filePath string) Chang
 		if len(precond) > 0 {
 			cs.Preconditions = &precond[0]
 		}
+		for _, check := range xmlCS.Preconditions.SQLCheck {
+			if sql := strings.TrimSpace(check.SQL); sql != "" {
+				cs.PreconditionSQL = append(cs.PreconditionSQL, sql)
+			}
+		}
 	}
 
 	// Convert changes

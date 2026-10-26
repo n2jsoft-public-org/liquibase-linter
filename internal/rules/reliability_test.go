@@ -463,3 +463,133 @@ func TestNoManualTransactionsRule_ExcludePatterns(t *testing.T) {
 		})
 	}
 }
+
+func TestDBMSScopeRule_Check(t *testing.T) {
+	cfg := &config.DBMSScopeConfig{
+		RequireDBMS:   true,
+		AllowedValues: []string{"mssql", "postgresql"},
+		ForbiddenPreconditionPatterns: map[string][]string{
+			"postgresql": {`(?i)(^|[^a-z0-9_])sys\.`, `(?i)\bobject_id\s*\(`, `(?i)\bcol_length\s*\(`},
+		},
+		ExcludePatterns: []string{"changelog/generated/**"},
+	}
+
+	tests := []struct {
+		name         string
+		wantMessages []string
+		changeSet    parser.ChangeSet
+		requireDBMS  bool
+	}{
+		{name: "missing dbms", changeSet: parser.ChangeSet{}, requireDBMS: true, wantMessages: []string{"has no dbms"}},
+		{name: "missing dbms not required", changeSet: parser.ChangeSet{}, requireDBMS: false},
+		{name: "known engine", changeSet: parser.ChangeSet{DBMSList: []string{"mssql"}}, requireDBMS: true},
+		{name: "all and none", changeSet: parser.ChangeSet{DBMSList: []string{"all", "!none"}}, requireDBMS: true},
+		{name: "typo", changeSet: parser.ChangeSet{DBMSList: []string{"postgres"}}, requireDBMS: true, wantMessages: []string{"unknown engine 'postgres'"}},
+		{name: "negated known engine", changeSet: parser.ChangeSet{DBMSList: []string{"!postgresql"}}, requireDBMS: true},
+		{name: "negated typo", changeSet: parser.ChangeSet{DBMSList: []string{"!oracle"}}, requireDBMS: true, wantMessages: []string{"unknown engine 'oracle'"}},
+		{
+			name:        "catalog precondition on other engine",
+			changeSet:   parser.ChangeSet{DBMSList: []string{"mssql"}, PreconditionSQL: []string{"SELECT OBJECT_ID('a')"}},
+			requireDBMS: true,
+		},
+		{
+			name:         "catalog precondition on target engine",
+			changeSet:    parser.ChangeSet{DBMSList: []string{"postgresql"}, PreconditionSQL: []string{"SELECT COUNT(*) FROM sys.tables"}},
+			requireDBMS:  true,
+			wantMessages: []string{"runs on postgresql (dbms:postgresql)"},
+		},
+		{
+			name:         "catalog precondition with all",
+			changeSet:    parser.ChangeSet{DBMSList: []string{"all"}, PreconditionSQL: []string{"SELECT COL_LENGTH('a', 'b')"}},
+			requireDBMS:  true,
+			wantMessages: []string{"col_length"},
+		},
+		{
+			name:         "catalog precondition without dbms",
+			changeSet:    parser.ChangeSet{PreconditionSQL: []string{"SELECT OBJECT_ID('a')"}},
+			requireDBMS:  false,
+			wantMessages: []string{"(dbms:all)"},
+		},
+		{
+			name:        "identifier containing a forbidden word",
+			changeSet:   parser.ChangeSet{DBMSList: []string{"postgresql"}, PreconditionSQL: []string{"SELECT my_object_id(1) FROM mysys.tables"}},
+			requireDBMS: true,
+		},
+		{
+			name:        "excluded file",
+			changeSet:   parser.ChangeSet{FilePath: "/repo/changelog/generated/data.sql"},
+			requireDBMS: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ruleCfg := *cfg
+			ruleCfg.RequireDBMS = tt.requireDBMS
+			rule := NewDBMSScopeRule(&ruleCfg)
+
+			cs := tt.changeSet
+			cs.ID, cs.Author = "1", "alice"
+			if cs.FilePath == "" {
+				cs.FilePath = "/repo/changelog/sprints/v1/changelog.sql"
+			}
+
+			violations := rule.Check(&parser.Changelog{ChangeSets: []parser.ChangeSet{cs}})
+			if len(violations) != len(tt.wantMessages) {
+				t.Fatalf("Check() returned %d violations, want %d: %+v", len(violations), len(tt.wantMessages), violations)
+			}
+			for i, want := range tt.wantMessages {
+				if !strings.Contains(violations[i].Message, want) {
+					t.Errorf("violation %d message = %q, want it to contain %q", i, violations[i].Message, want)
+				}
+				if violations[i].Rule != "dbms-scope" || violations[i].Author != "alice" || violations[i].ChangeSetID != "1" {
+					t.Errorf("violation %d = %+v, want rule dbms-scope on alice:1", i, violations[i])
+				}
+			}
+		})
+	}
+}
+
+func TestDBMSScopeRule_Fixture(t *testing.T) {
+	changelog, err := parser.Parse("../../testdata/dbms-scope/changelog.sql")
+	if err != nil {
+		t.Fatalf("Parse() failed: %v", err)
+	}
+
+	rule := NewDBMSScopeRule(&config.DBMSScopeConfig{
+		RequireDBMS:   true,
+		AllowedValues: []string{"mssql", "postgresql"},
+		ForbiddenPreconditionPatterns: map[string][]string{
+			"postgresql": {`(?i)(^|[^a-z0-9_])sys\.`},
+		},
+	})
+
+	want := map[string]int{"no-dbms": 3, "typo": 6, "catalog-on-pg": 9}
+	violations := rule.Check(changelog)
+	if len(violations) != len(want) {
+		t.Fatalf("Check() returned %d violations, want %d: %+v", len(violations), len(want), violations)
+	}
+	for _, v := range violations {
+		line, ok := want[v.ChangeSetID]
+		if !ok {
+			t.Errorf("unexpected violation on %s: %s", v.ChangeSetID, v.Message)
+			continue
+		}
+		if v.LineNumber != line || !strings.HasPrefix(v.Line, "--changeset alice:"+v.ChangeSetID) {
+			t.Errorf("violation on %s points at line %d %q, want line %d", v.ChangeSetID, v.LineNumber, v.Line, line)
+		}
+	}
+}
+
+func TestDBMSScopeRule_DefaultConfig(t *testing.T) {
+	rule := NewDBMSScopeRule(nil)
+	changelog := &parser.Changelog{ChangeSets: []parser.ChangeSet{
+		{ID: "1", Author: "alice", DBMSList: []string{"oracle", "!yugabytedb"}},
+		{ID: "2", Author: "alice"},
+	}}
+
+	violations := rule.Check(changelog)
+	if len(violations) != 1 || violations[0].ChangeSetID != "2" {
+		t.Errorf("Check() = %+v, want only the missing dbms on changeset 2", violations)
+	}
+}
