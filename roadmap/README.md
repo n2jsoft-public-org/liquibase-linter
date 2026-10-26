@@ -54,6 +54,14 @@ Detects database-specific IF EXISTS patterns in SQL scripts and recommends using
 
 Enforces that each changeset contains only a single change operation for better atomicity, cleaner rollbacks, and easier debugging.
 
+### 7. DBMS Scope and DBMS Twin
+**File**: [dbms-scope.md](dbms-scope.md)  
+**Status**: 📋 Planned  
+**Priority**: Medium  
+**Effort**: 9-13 hours
+
+Two opt-in rules for changelogs shared by several engines: `dbms-scope` requires a valid `dbms` on every changeset and keeps engine-specific SQL out of preconditions; `dbms-twin` requires a target-engine counterpart for each source-engine changeset.
+
 ## Implementation Summary
 
 | Rule                   | File                             | Target        | Effort | Priority |
@@ -64,6 +72,7 @@ Enforces that each changeset contains only a single change operation for better 
 | no-if-exists           | `internal/rules/bestpractice.go` | Existing file | 3-4h   | Medium   |
 | atomic-changeset       | `internal/rules/bestpractice.go` | Existing file | 7-8h   | Medium   |
 | no-manual-transactions | `internal/rules/reliability.go`  | **NEW FILE**  | 4-5h   | Medium   |
+| dbms-scope, dbms-twin  | `internal/rules/reliability.go`  | Existing file | 9-13h  | Medium   |
 
 **Total Estimated Effort**: 26-31 hours (including testing, documentation, and integration)
 
