@@ -1,0 +1,42 @@
+{
+    "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+    "extends": [
+        "config:recommended",
+        ":dependencyDashboard",
+        ":semanticCommits",
+        ":prHourlyLimit2",
+        "helpers:pinGitHubActionDigests",
+        "schedule:weekly"
+    ],
+    "labels": [
+        "dependencies"
+    ],
+    "timezone": "Europe/Paris",
+    "ignorePaths": [
+        "**/build/**",
+        "**/dist/**"
+    ],
+    "postUpdateOptions": [
+        "gomodTidy"
+    ],
+    "packageRules": [
+        {
+            "description": "Group all GitHub Actions bumps into one PR",
+            "matchManagers": [
+                "github-actions"
+            ],
+            "groupName": "github actions"
+        },
+        {
+            "description": "Auto-merge non-major updates once required CI checks pass: Renovate merges them itself, after rebasing and retesting, with its bypass of the review required by the PR ruleset",
+            "matchUpdateTypes": [
+                "minor",
+                "patch",
+                "digest",
+                "pin"
+            ],
+            "automerge": true,
+            "platformAutomerge": false
+        }
+    ]
+}
