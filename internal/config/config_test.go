@@ -340,3 +340,40 @@ func TestValidate_InvalidDBMSScopePattern(t *testing.T) {
 		t.Fatal("Expected validation error for invalid dbms_scope pattern, got nil")
 	}
 }
+
+func TestValidate_DBMSTwin(t *testing.T) {
+	valid := DBMSTwinConfig{Enabled: true, SourceDBMS: "mssql", TargetDBMS: "postgresql", IDSuffix: "-pg"}
+
+	tests := []struct {
+		modify  func(*DBMSTwinConfig)
+		name    string
+		wantErr bool
+	}{
+		{name: "valid", modify: func(*DBMSTwinConfig) {}},
+		{name: "disabled and empty", modify: func(c *DBMSTwinConfig) { *c = DBMSTwinConfig{} }},
+		{name: "missing target", modify: func(c *DBMSTwinConfig) { c.TargetDBMS = "" }, wantErr: true},
+		{name: "missing suffix", modify: func(c *DBMSTwinConfig) { c.IDSuffix = "" }, wantErr: true},
+		{name: "same engines", modify: func(c *DBMSTwinConfig) { c.TargetDBMS = "MSSQL" }, wantErr: true},
+		{name: "since pattern", modify: func(c *DBMSTwinConfig) { c.SincePathPattern = `sprints/v(\d+)/` }},
+		{name: "invalid since pattern", modify: func(c *DBMSTwinConfig) { c.SincePathPattern = `(` }, wantErr: true},
+		{name: "since pattern without group", modify: func(c *DBMSTwinConfig) { c.SincePathPattern = `sprints/v\d+/` }, wantErr: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := Default()
+			cfg.DBMSTwin = valid
+			tt.modify(&cfg.DBMSTwin)
+			if err := cfg.Validate(); (err != nil) != tt.wantErr {
+				t.Errorf("Validate() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestDefault_DBMSTwin(t *testing.T) {
+	cfg := Default()
+	if cfg.DBMSTwin.Enabled || cfg.DBMSTwin.IDSuffix != "-pg" {
+		t.Errorf("DBMSTwin = %+v, want disabled with id_suffix -pg", cfg.DBMSTwin)
+	}
+}

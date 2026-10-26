@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 )
@@ -21,6 +22,7 @@ type Config struct {
 	LabelPattern         LabelPatternConfig         `yaml:"label_pattern"`
 	NoManualTransactions NoManualTransactionsConfig `yaml:"no_manual_transactions"`
 	DBMSScope            DBMSScopeConfig            `yaml:"dbms_scope"`
+	DBMSTwin             DBMSTwinConfig             `yaml:"dbms_twin"`
 	AtomicChangeset      AtomicChangesetConfig      `yaml:"atomic_changeset"`
 	Parser               ParserConfig               `yaml:"parser"`
 }
@@ -116,6 +118,25 @@ type DBMSScopeConfig struct {
 	Enabled bool `yaml:"enabled"`
 	// RequireDBMS reports changesets without a dbms attribute.
 	RequireDBMS bool `yaml:"require_dbms"`
+}
+
+// DBMSTwinConfig represents configuration for dbms-twin rule.
+type DBMSTwinConfig struct {
+	// SourceDBMS is the engine the changelog is migrated from.
+	SourceDBMS string `yaml:"source_dbms"`
+	// TargetDBMS is the engine the changelog is migrated to.
+	TargetDBMS string `yaml:"target_dbms"`
+	// IDSuffix is appended to a source changeset ID to name its twin.
+	IDSuffix string `yaml:"id_suffix"`
+	// SincePathPattern is a regex whose first capture group is a number; files that do not
+	// match it are not checked.
+	SincePathPattern string `yaml:"since_path_pattern"`
+	// ExcludePatterns are glob patterns to exclude from checking.
+	ExcludePatterns []string `yaml:"exclude_patterns"`
+	// Since is the lowest number accepted from SincePathPattern.
+	Since int `yaml:"since"`
+	// Enabled determines if the rule is active.
+	Enabled bool `yaml:"enabled"`
 }
 
 // LiquibaseDBMSNames are the database short names Liquibase accepts in a dbms attribute.
@@ -222,6 +243,10 @@ func Default() *Config {
 			RequireDBMS:   true,
 			AllowedValues: append([]string{}, LiquibaseDBMSNames...),
 		},
+		DBMSTwin: DBMSTwinConfig{
+			Enabled:  false, // Disabled by default (opt-in, for migrations between two engines)
+			IDSuffix: "-pg",
+		},
 		SeverityThreshold: "warning",
 	}
 }
@@ -317,6 +342,29 @@ func (c *Config) Validate() error {
 		}
 	}
 
+	return c.DBMSTwin.validate()
+}
+
+// validate checks the dbms-twin configuration when the rule is enabled.
+func (t *DBMSTwinConfig) validate() error {
+	if !t.Enabled {
+		return nil
+	}
+	if t.SourceDBMS == "" || t.TargetDBMS == "" || t.IDSuffix == "" {
+		return errors.New("dbms_twin.source_dbms, dbms_twin.target_dbms and dbms_twin.id_suffix are required when dbms_twin is enabled")
+	}
+	if strings.EqualFold(t.SourceDBMS, t.TargetDBMS) {
+		return fmt.Errorf("dbms_twin.source_dbms and dbms_twin.target_dbms must differ, both are %q", t.SourceDBMS)
+	}
+	if t.SincePathPattern != "" {
+		re, err := regexp.Compile(t.SincePathPattern)
+		if err != nil {
+			return fmt.Errorf("invalid dbms_twin.since_path_pattern %q: %w", t.SincePathPattern, err)
+		}
+		if re.NumSubexp() == 0 {
+			return fmt.Errorf("dbms_twin.since_path_pattern %q needs a capture group for the number compared to since", t.SincePathPattern)
+		}
+	}
 	return nil
 }
 

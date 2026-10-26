@@ -26,6 +26,7 @@ This document provides an overview of all available linting rules in the Liquiba
 | [non-idempotent](rules/non-idempotent.md)               | Warning  | Detects operations that may fail on re-run      |
 | [missing-preconditions](rules/missing-preconditions.md) | Warning  | Ensures risky operations have preconditions     |
 | [dbms-scope](rules/dbms-scope.md) (opt-in)              | Critical | Ensures changesets declare a valid `dbms`       |
+| [dbms-twin](rules/dbms-twin.md) (opt-in)                | Critical | Requires a target-engine twin per source change |
 
 ## Performance Rules
 

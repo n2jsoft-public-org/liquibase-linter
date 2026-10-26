@@ -56,7 +56,7 @@ Enforces that each changeset contains only a single change operation for better 
 
 ### 7. DBMS Scope and DBMS Twin
 **File**: [dbms-scope.md](dbms-scope.md)  
-**Status**: 🚧 In Progress (`dbms-scope` implemented, `dbms-twin` planned)  
+**Status**: ✅ Implemented  
 **Priority**: Medium  
 **Effort**: 9-13 hours
 

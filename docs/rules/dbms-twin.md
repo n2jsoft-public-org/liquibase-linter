@@ -2,16 +2,16 @@
 
 **Category**: Reliability  
 **Severity**: Critical (default)  
-**Status**: 📋 Planned, see [roadmap/dbms-scope.md](../../roadmap/dbms-scope.md)
+**Status**: Opt-in (disabled by default)
 
 ## What It Detects
 
 When a changelog is migrated from one engine (the *source*) to another (the *target*), every change
 written for the source must also exist for the target. This rule checks that:
 
-1. A changeset that runs on the source engine only has a **twin** in the same file: same author, ID
-   followed by the configured suffix (e.g. `add-email` → `add-email-pg`), and a `dbms` that reaches
-   the target engine.
+1. A changeset whose `dbms` names the source engine and does not reach the target engine has a
+   **twin** in the same file: same author, ID followed by the configured suffix (e.g. `add-email` →
+   `add-email-pg`), and a `dbms` that reaches the target engine.
 2. A changeset whose ID ends with the suffix declares `dbms` equal to the target engine alone.
 
 A changeset that already reaches the target (`dbms:mssql,postgresql`, `dbms:all`, no `dbms`) needs
@@ -67,11 +67,6 @@ CREATE FULLTEXT INDEX ON Users(Name) KEY INDEX PK_Users;
 ## Configuration
 
 ```yaml
-rules:
-  dbms-twin:
-    enabled: true
-    severity: critical  # info, warning, critical
-
 dbms_twin:
   enabled: true
   source_dbms: mssql
@@ -82,6 +77,12 @@ dbms_twin:
   since: 10
   exclude_patterns:
     - "changelog/generated/**"
+
+# Optional: change the severity (keep enabled: true, an entry without it disables the rule)
+rules:
+  dbms-twin:
+    enabled: true
+    severity: warning
 ```
 
 ### Configuration Options
@@ -94,6 +95,10 @@ dbms_twin:
   not match it are not checked (optional)
 - **since**: Lowest number accepted from `since_path_pattern` (optional, requires `since_path_pattern`)
 - **exclude_patterns**: Glob patterns for files to skip (optional)
+
+The configuration is rejected when the rule is enabled without `source_dbms`, `target_dbms` or
+`id_suffix`, when both engines are the same, or when `since_path_pattern` is not a valid regular
+expression with a capture group.
 
 ## Suppression
 

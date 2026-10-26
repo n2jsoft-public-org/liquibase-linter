@@ -197,6 +197,11 @@ Examples:
 		registry.Register(rules.NewDBMSScopeRule(&cfg.DBMSScope))
 	}
 
+	// Register dbms-twin rule (only if enabled in config)
+	if cfg.DBMSTwin.Enabled {
+		registry.Register(rules.NewDBMSTwinRule(&cfg.DBMSTwin))
+	}
+
 	// Register file structure rules (only if enabled in config)
 	if cfg.FileStructure.Enabled {
 		registry.Register(rules.NewSprintFolderStructureRule(&cfg.FileStructure))
