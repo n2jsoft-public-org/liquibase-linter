@@ -14,6 +14,14 @@ This guide provides detailed information on using the Liquibase Linter effective
 
 ## Installation
 
+### Using Homebrew (macOS and Linux)
+
+```bash
+brew install --cask n2jsoft-public-org/tap/liquibase-linter
+```
+
+Update it with `brew upgrade liquibase-linter`.
+
 ### Using Go Install
 
 ```bash
