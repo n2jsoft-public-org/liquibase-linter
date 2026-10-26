@@ -94,18 +94,6 @@ func (r *NonIdempotentChangesRule) shouldExcludeFile(filePath string) bool {
 	normPath := filepath.ToSlash(filePath)
 
 	for _, pattern := range r.config.ExcludePatterns {
-		// Special case for **/init/** and **/seed/** patterns
-		if pattern == "**/init/**" {
-			if strings.Contains(normPath, "/init/") || strings.Contains(normPath, "\\init\\") {
-				return true
-			}
-		}
-		if pattern == "**/seed/**" {
-			if strings.Contains(normPath, "/seed/") || strings.Contains(normPath, "\\seed\\") {
-				return true
-			}
-		}
-
 		// Use MatchesResourceFilter for proper glob matching
 		matched, err := parser.MatchesResourceFilter(normPath, pattern)
 		if err == nil && matched {
@@ -449,13 +437,6 @@ func (r *SprintFolderStructureRule) shouldExclude(filePath string) bool {
 	normPath := filepath.ToSlash(filePath)
 
 	for _, pattern := range r.config.ExcludePatterns {
-		// Special case for **/init/** pattern - check if path contains /init/
-		if pattern == "**/init/**" {
-			if strings.Contains(normPath, "/init/") || strings.Contains(normPath, "\\init\\") {
-				return true
-			}
-		}
-
 		// Use MatchesResourceFilter for proper glob matching including **
 		matched, err := parser.MatchesResourceFilter(normPath, pattern)
 		if err == nil && matched {
@@ -588,13 +569,6 @@ func (r *DDLLocationRule) shouldExclude(filePath string) bool {
 	normPath := filepath.ToSlash(filePath)
 
 	for _, pattern := range r.config.ExcludePatterns {
-		// Special case for **/init/** pattern - check if path contains /init/
-		if pattern == "**/init/**" {
-			if strings.Contains(normPath, "/init/") || strings.Contains(normPath, "\\init\\") {
-				return true
-			}
-		}
-
 		// Use MatchesResourceFilter for proper glob matching including **
 		matched, err := parser.MatchesResourceFilter(normPath, pattern)
 		if err == nil && matched {
@@ -700,13 +674,6 @@ func (r *DMLLocationRule) shouldExclude(filePath string) bool {
 	normPath := filepath.ToSlash(filePath)
 
 	for _, pattern := range r.config.ExcludePatterns {
-		// Special case for **/init/** pattern - check if path contains /init/
-		if pattern == "**/init/**" {
-			if strings.Contains(normPath, "/init/") || strings.Contains(normPath, "\\init\\") {
-				return true
-			}
-		}
-
 		// Use MatchesResourceFilter for proper glob matching including **
 		matched, err := parser.MatchesResourceFilter(normPath, pattern)
 		if err == nil && matched {
@@ -873,13 +840,6 @@ func (r *LabelPatternRule) shouldExclude(filePath string) bool {
 	normPath := filepath.ToSlash(filePath)
 
 	for _, pattern := range r.excludePatterns {
-		// Special case for **/init/** pattern
-		if pattern == "**/init/**" {
-			if strings.Contains(normPath, "/init/") || strings.Contains(normPath, "\\init\\") {
-				return true
-			}
-		}
-
 		// Use MatchesResourceFilter for proper glob matching
 		matched, err := parser.MatchesResourceFilter(normPath, pattern)
 		if err == nil && matched {

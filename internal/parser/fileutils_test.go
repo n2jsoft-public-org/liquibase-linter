@@ -120,3 +120,52 @@ func TestJoinPath(t *testing.T) {
 		})
 	}
 }
+
+func TestMatchesResourceFilter_RecursivePatterns(t *testing.T) {
+	tests := []struct {
+		name     string
+		filePath string
+		pattern  string
+		want     bool
+	}{
+		// Multiple ** segments
+		{"init dir absolute path", "/repo/db/changelog/init/a.sql", "**/init/**", true},
+		{"init dir nested", "/repo/db/init/sub/deep/a.xml", "**/init/**", true},
+		{"init dir relative path", "init/a.sql", "**/init/**", true},
+		{"init dir windows path", `C:\repo\db\init\a.sql`, "**/init/**", true},
+		{"init as file name prefix", "/repo/db/initial/a.sql", "**/init/**", false},
+		{"init as file name", "/repo/db/init.sql", "**/init/**", false},
+		{"generated dir", "/repo/db/generated/v1/a.yaml", "**/generated/**", true},
+		{"generated missing", "/repo/db/changelog/a.yaml", "**/generated/**", false},
+
+		// ** in the middle with a segment pattern after it
+		{"data under changelog", "changelog/sprint1/data/a.sql", "changelog/**/data/*.sql", true},
+		{"data directly under changelog", "changelog/data/a.sql", "changelog/**/data/*.sql", true},
+		{"data under absolute changelog", "/repo/changelog/s1/s2/data/a.sql", "changelog/**/data/*.sql", true},
+		{"data wrong extension", "changelog/sprint1/data/a.xml", "changelog/**/data/*.sql", false},
+		{"data file too deep", "changelog/data/sub/a.sql", "changelog/**/data/*.sql", false},
+		{"data outside changelog", "other/sprint1/data/a.sql", "changelog/**/data/*.sql", false},
+
+		// Single ** (existing behaviour)
+		{"any sql file", "/repo/db/a.sql", "**/*.sql", true},
+		{"any sql file relative", "a.sql", "**/*.sql", true},
+		{"not a sql file", "/repo/db/a.xml", "**/*.sql", false},
+		{"ignore directory", "changelog/init/001.sql", "changelog/init/**", true},
+		{"ignore directory absolute", "/repo/changelog/init/sub/001.sql", "changelog/init/**", true},
+		{"ignore directory other", "changelog/v1/001.sql", "changelog/init/**", false},
+		{"versioned dirs", "v1/sub/a.xml", "v*/**/*.xml", true},
+		{"versioned dirs wrong ext", "v1/sub/a.sql", "v*/**/*.xml", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := MatchesResourceFilter(tt.filePath, tt.pattern)
+			if err != nil {
+				t.Fatalf("MatchesResourceFilter() error = %v", err)
+			}
+			if got != tt.want {
+				t.Errorf("MatchesResourceFilter(%q, %q) = %v, want %v", tt.filePath, tt.pattern, got, tt.want)
+			}
+		})
+	}
+}
