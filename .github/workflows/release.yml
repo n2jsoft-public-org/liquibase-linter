@@ -1,99 +1,132 @@
+# Publishes a GitHub release for every push to main, tagged vX.Y.Z by semantic-release from the
+# conventional commits since the last release (.releaserc.yaml), and its Docker image.
 name: Release
 
 on:
   push:
-    tags:
-      - 'v*'
+    branches:
+      - main
+  workflow_dispatch:
 
 permissions:
-  contents: write
-  packages: write
+  contents: read
+
+# Releases go out one at a time, in push order.
+concurrency:
+  group: release
+  cancel-in-progress: false
 
 jobs:
-  release:
-    name: Release
+  test:
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    
+    permissions:
+      contents: read
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v6
-      with:
-        fetch-depth: 0
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
-    - name: Set up Go
-      uses: actions/setup-go@v6
-      with:
-        go-version-file: 'go.mod'
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version-file: go.mod
 
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v4
+      - name: Vet and test
+        run: |
+          go vet ./...
+          go test ./...
 
-    - name: Log in to GitHub Container Registry
-      uses: docker/login-action@v4
-      with:
-        registry: ghcr.io
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
+  release:
+    # A manual run from another branch publishes nothing.
+    if: github.ref == 'refs/heads/main'
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+      # cosign's keyless signature.
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          # semantic-release and GoReleaser need the full history and the tags.
+          fetch-depth: 0
 
-    - name: Run tests
-      run: go test -v ./...
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version-file: go.mod
 
-    - name: Build binaries
-      run: |
-        # Extract version from tag (remove 'v' prefix)
-        VERSION=${GITHUB_REF_NAME#v}
-        COMMIT_HASH=$(git rev-parse --short HEAD)
-        BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-        LDFLAGS="-X main.version=${VERSION} -X main.commitHash=${COMMIT_HASH} -X main.buildDate=${BUILD_DATE}"
-        
-        echo "Building version: ${VERSION}"
-        echo "Commit: ${COMMIT_HASH}"
-        echo "Build date: ${BUILD_DATE}"
-        
-        # Linux AMD64
-        GOOS=linux GOARCH=amd64 go build -ldflags "${LDFLAGS}" -o liquibase-linter-linux-amd64 ./cmd/liquibase-linter
-        
-        # Linux ARM64
-        GOOS=linux GOARCH=arm64 go build -ldflags "${LDFLAGS}" -o liquibase-linter-linux-arm64 ./cmd/liquibase-linter
-        
-        # macOS AMD64
-        GOOS=darwin GOARCH=amd64 go build -ldflags "${LDFLAGS}" -o liquibase-linter-darwin-amd64 ./cmd/liquibase-linter
-        
-        # macOS ARM64 (Apple Silicon)
-        GOOS=darwin GOARCH=arm64 go build -ldflags "${LDFLAGS}" -o liquibase-linter-darwin-arm64 ./cmd/liquibase-linter
-        
-        # Windows AMD64
-        GOOS=windows GOARCH=amd64 go build -ldflags "${LDFLAGS}" -o liquibase-linter-windows-amd64.exe ./cmd/liquibase-linter
-        
-        # Create checksums
-        sha256sum liquibase-linter-* > checksums.txt
+      # Tags HEAD and creates its release as a draft. A run behind origin/main (a re-run of an older
+      # commit) or without a conventional commit since the last release publishes nothing.
+      - name: Tag the release
+        uses: cycjimmy/semantic-release-action@d9bf53a078bd2f86aaffaec796dbb3d28f1b6f34 # v8.1.3
+        with:
+          semantic_version: 25.0.9
+          # The preset's 10.x needs conventional-changelog-writer 9; release-notes-generator 14 ships 8.
+          extra_plugins: |
+            conventional-changelog-conventionalcommits@9.3.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Create Release
-      uses: softprops/action-gh-release@v2
-      with:
-        files: |
-          liquibase-linter-*
-          checksums.txt
-        draft: false
-        prerelease: false
-        generate_release_notes: true
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # The draft of HEAD, from this run or from a failed one, so a re-run finishes it.
+      - name: Find the draft release
+        id: draft
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tag="$(git tag --points-at HEAD --list 'v*' | head -n 1)"
+          if [ -n "$tag" ] && [ "$(gh release view "$tag" --json isDraft --jq .isDraft)" = true ]; then
+            echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          fi
 
-    - name: Build and push Docker image
-      run: |
-        VERSION=${GITHUB_REF_NAME#v}
-        COMMIT_HASH=$(git rev-parse --short HEAD)
-        BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-        
-        docker buildx build \
-          --build-arg VERSION=${VERSION} \
-          --build-arg COMMIT_HASH=${COMMIT_HASH} \
-          --build-arg BUILD_DATE=${BUILD_DATE} \
-          --platform linux/amd64,linux/arm64 \
-          --push \
-          --tag ghcr.io/${{ github.repository }}:${VERSION} \
-          --tag ghcr.io/${{ github.repository }}:latest \
-          --cache-from type=gha \
-          --cache-to type=gha,mode=max \
-          .
+      # Signs checksums.txt keyless, with the OIDC token of this run.
+      - name: Install cosign
+        if: steps.draft.outputs.tag != ''
+        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+
+      # The tag on HEAD is the version GoReleaser injects into the binaries. It attaches them to the
+      # draft, then publishes it.
+      - name: Build and publish the release
+        if: steps.draft.outputs.tag != ''
+        uses: goreleaser/goreleaser-action@a4f02ab5355a589de60d917a659ce617ed19b3de # v7
+        with:
+          distribution: goreleaser
+          version: "~> v2"
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        if: steps.draft.outputs.tag != ''
+        uses: docker/setup-buildx-action@v4
+
+      - name: Log in to GitHub Container Registry
+        if: steps.draft.outputs.tag != ''
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        if: steps.draft.outputs.tag != ''
+        env:
+          TAG: ${{ steps.draft.outputs.tag }}
+        run: |
+          VERSION=${TAG#v}
+          COMMIT_HASH=$(git rev-parse --short HEAD)
+          BUILD_DATE=$(git show -s --format=%cI HEAD)
+
+          docker buildx build \
+            --build-arg VERSION=${VERSION} \
+            --build-arg COMMIT_HASH=${COMMIT_HASH} \
+            --build-arg BUILD_DATE=${BUILD_DATE} \
+            --platform linux/amd64,linux/arm64 \
+            --push \
+            --tag ghcr.io/${{ github.repository }}:${VERSION} \
+            --tag ghcr.io/${{ github.repository }}:latest \
+            --cache-from type=gha \
+            --cache-to type=gha,mode=max \
+            .

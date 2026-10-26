@@ -1,0 +1,57 @@
+# Builds liquibase-linter for every supported platform into dist/: run `goreleaser build --snapshot --clean`.
+# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
+version: 2
+
+project_name: liquibase-linter
+
+builds:
+  - id: liquibase-linter
+    main: ./cmd/liquibase-linter
+    binary: liquibase-linter
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - darwin
+      - linux
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w -X main.version={{ .Version }} -X main.commitHash={{ .ShortCommit }} -X main.buildDate={{ .CommitDate }}
+    # Same commit, same binary.
+    mod_timestamp: "{{ .CommitTimestamp }}"
+
+archives:
+  # Raw binaries, not archives: the docs and users' CI download
+  # releases/latest/download/liquibase-linter-<os>-<arch>[.exe].
+  - name_template: "{{ .ProjectName }}-{{ .Os }}-{{ .Arch }}"
+    formats:
+      - binary
+
+checksum:
+  name_template: checksums.txt
+
+# Keyless: GitHub's OIDC token identifies the release workflow (id-token: write).
+signs:
+  - cmd: cosign
+    signature: "${artifact}.sigstore.json"
+    args:
+      - sign-blob
+      - "--bundle=${signature}"
+      - "${artifact}"
+      - "--yes"
+    artifacts: checksum
+
+changelog:
+  disable: true
+
+# semantic-release creates the release as a draft, named after its tag, with the notes
+# (.releaserc.yaml). GoReleaser attaches the files to that draft, then publishes it.
+release:
+  use_existing_draft: true
+  mode: keep-existing
+  # A re-run of a failed release replaces what the first run uploaded.
+  replace_existing_artifacts: true
