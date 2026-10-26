@@ -181,6 +181,25 @@ To change its severity (default: `critical`), add it under `rules` with `enabled
 
 For more details, see the [dbms-scope rule documentation](rules/dbms-scope.md).
 
+### DBMS Twin Rule Configuration
+
+The `dbms-twin` rule is disabled by default. Enable it while migrating a changelog from one engine to
+another, so that every change written for the source engine gets a counterpart for the target:
+
+```yaml
+dbms_twin:
+  enabled: true
+  source_dbms: mssql                          # required
+  target_dbms: postgresql                     # required
+  id_suffix: "-pg"                            # twin ID = source ID + suffix (default: -pg)
+  since_path_pattern: 'changelog/sprints/v(\d+)/' # optional: only check files from...
+  since: 10                                   # ...this number on
+```
+
+To change its severity (default: `critical`), add it under `rules` with `enabled: true`.
+
+For more details, see the [dbms-twin rule documentation](rules/dbms-twin.md).
+
 ## File Structure Configuration
 
 The file structure rules help enforce consistent organization of database changes across sprints.

@@ -593,3 +593,139 @@ func TestDBMSScopeRule_DefaultConfig(t *testing.T) {
 		t.Errorf("Check() = %+v, want only the missing dbms on changeset 2", violations)
 	}
 }
+
+func TestDBMSTwinRule_Check(t *testing.T) {
+	const file = "/repo/changelog/sprints/v10/changelog.sql"
+
+	tests := []struct {
+		name       string
+		changeSets []parser.ChangeSet
+		wantIDs    []string // changeset IDs with a violation, in order
+	}{
+		{
+			name: "twin present",
+			changeSets: []parser.ChangeSet{
+				{ID: "1", Author: "alice", FilePath: file, DBMSList: []string{"mssql"}},
+				{ID: "1-pg", Author: "alice", FilePath: file, DBMSList: []string{"postgresql"}},
+			},
+		},
+		{
+			name:       "twin missing",
+			changeSets: []parser.ChangeSet{{ID: "1", Author: "alice", FilePath: file, DBMSList: []string{"mssql"}}},
+			wantIDs:    []string{"1"},
+		},
+		{
+			name: "twin by another author",
+			changeSets: []parser.ChangeSet{
+				{ID: "1", Author: "alice", FilePath: file, DBMSList: []string{"mssql"}},
+				{ID: "1-pg", Author: "bob", FilePath: file, DBMSList: []string{"postgresql"}},
+			},
+			wantIDs: []string{"1"},
+		},
+		{
+			name: "twin in another file",
+			changeSets: []parser.ChangeSet{
+				{ID: "1", Author: "alice", FilePath: file, DBMSList: []string{"mssql"}},
+				{ID: "1-pg", Author: "alice", FilePath: "/repo/changelog/sprints/v10/other.sql", DBMSList: []string{"postgresql"}},
+			},
+			wantIDs: []string{"1"},
+		},
+		{
+			name: "twin on the wrong engine",
+			changeSets: []parser.ChangeSet{
+				{ID: "1", Author: "alice", FilePath: file, DBMSList: []string{"mssql"}},
+				{ID: "1-pg", Author: "alice", FilePath: file, DBMSList: []string{"mssql", "postgresql"}},
+			},
+			wantIDs: []string{"1-pg"},
+		},
+		{
+			name:       "already reaches the target",
+			changeSets: []parser.ChangeSet{{ID: "1", Author: "alice", FilePath: file, DBMSList: []string{"mssql", "postgresql"}}},
+		},
+		{
+			name:       "does not name the source",
+			changeSets: []parser.ChangeSet{{ID: "1", Author: "alice", FilePath: file, DBMSList: []string{"oracle"}}},
+		},
+		{
+			name:       "before the since threshold",
+			changeSets: []parser.ChangeSet{{ID: "1", Author: "alice", FilePath: "/repo/changelog/sprints/v9/changelog.sql", DBMSList: []string{"mssql"}}},
+		},
+		{
+			name:       "outside the since pattern",
+			changeSets: []parser.ChangeSet{{ID: "1", Author: "alice", FilePath: "/repo/changelog/init/changelog.sql", DBMSList: []string{"mssql"}}},
+		},
+		{
+			name:       "excluded file",
+			changeSets: []parser.ChangeSet{{ID: "1", Author: "alice", FilePath: "/repo/changelog/sprints/v10/generated/data.sql", DBMSList: []string{"mssql"}}},
+		},
+	}
+
+	rule := NewDBMSTwinRule(&config.DBMSTwinConfig{
+		SourceDBMS:       "mssql",
+		TargetDBMS:       "postgresql",
+		IDSuffix:         "-pg",
+		SincePathPattern: `sprints/v(\d+)/`,
+		Since:            10,
+		ExcludePatterns:  []string{"changelog/sprints/v10/generated/**"},
+	})
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			violations := rule.Check(&parser.Changelog{ChangeSets: tt.changeSets})
+			gotIDs := make([]string, 0, len(violations))
+			for _, v := range violations {
+				gotIDs = append(gotIDs, v.ChangeSetID)
+				if v.Rule != "dbms-twin" || v.Author == "" {
+					t.Errorf("violation = %+v, want rule dbms-twin with an author", v)
+				}
+			}
+			if strings.Join(gotIDs, ",") != strings.Join(tt.wantIDs, ",") {
+				t.Errorf("violations on %v, want %v: %+v", gotIDs, tt.wantIDs, violations)
+			}
+		})
+	}
+}
+
+func TestDBMSTwinRule_NoSinceThreshold(t *testing.T) {
+	rule := NewDBMSTwinRule(&config.DBMSTwinConfig{SourceDBMS: "mssql", TargetDBMS: "postgresql", IDSuffix: "-pg"})
+	changelog := &parser.Changelog{ChangeSets: []parser.ChangeSet{
+		{ID: "1", Author: "alice", FilePath: "/repo/changelog/init/changelog.sql", DBMSList: []string{"MSSQL"}},
+	}}
+
+	if violations := rule.Check(changelog); len(violations) != 1 {
+		t.Errorf("Check() returned %d violations, want 1 (every file is in scope without since_path_pattern)", len(violations))
+	}
+}
+
+func TestDBMSTwinRule_Fixture(t *testing.T) {
+	rule := NewDBMSTwinRule(&config.DBMSTwinConfig{
+		SourceDBMS:       "mssql",
+		TargetDBMS:       "postgresql",
+		IDSuffix:         "-pg",
+		SincePathPattern: `sprints/v(\d+)/`,
+		Since:            10,
+	})
+
+	got := make(map[string]int)
+	for _, path := range []string{"../../testdata/dbms-twin/sprints/v9/changelog.sql", "../../testdata/dbms-twin/sprints/v10/changelog.sql"} {
+		changelog, err := parser.Parse(path)
+		if err != nil {
+			t.Fatalf("Parse(%s) failed: %v", path, err)
+		}
+		for _, v := range FilterSuppressedViolations(rule.Check(changelog), changelog) {
+			got[v.ChangeSetID] = v.LineNumber
+		}
+	}
+
+	// alice:2 has no twin, alice:4 has none reaching PostgreSQL, alice:4-pg is on the wrong
+	// engine; alice:3 is suppressed and v9 is before the threshold.
+	want := map[string]int{"2": 9, "4": 16, "4-pg": 19}
+	if len(got) != len(want) {
+		t.Fatalf("violations on %v, want %v", got, want)
+	}
+	for id, line := range want {
+		if got[id] != line {
+			t.Errorf("violation on %s at line %d, want line %d", id, got[id], line)
+		}
+	}
+}

@@ -142,6 +142,6 @@ See [Rule Suppression](../suppression.md).
 
 ## See Also
 
-- [DBMS Twin](dbms-twin.md) - Planned rule requiring a counterpart changeset for a second engine
+- [DBMS Twin](dbms-twin.md) - Requires a counterpart changeset for a second engine
 - [No IF EXISTS](no-if-exists.md) - Engine-specific existence checks in the SQL body
 - [Liquibase dbms attribute](https://docs.liquibase.com/concepts/changelogs/attributes/dbms.html)

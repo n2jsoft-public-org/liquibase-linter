@@ -3,8 +3,10 @@ package rules
 import (
 	"fmt"
 	"maps"
+	"path/filepath"
 	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/n2jsoft-public-org/liquibase-linter/internal/config"
@@ -285,11 +287,17 @@ func (r *DBMSScopeRule) firstForbiddenMatch(engine string, sqls []string) string
 	return ""
 }
 
-// violation builds a violation for the changeset, pointing at its header when the line is known.
+// violation builds a violation of this rule for the changeset.
 func (r *DBMSScopeRule) violation(cs *parser.ChangeSet, message string) Violation {
+	return changeSetViolation(r, cs, message)
+}
+
+// changeSetViolation builds a violation of the rule for the changeset, pointing at its
+// header when the line is known.
+func changeSetViolation(rule Rule, cs *parser.ChangeSet, message string) Violation {
 	v := Violation{
-		Rule:        r.ID(),
-		Severity:    r.Severity(),
+		Rule:        rule.ID(),
+		Severity:    rule.Severity(),
 		Message:     message,
 		FilePath:    cs.FilePath,
 		ChangeSetID: cs.ID,
@@ -308,4 +316,130 @@ func dbmsOrAll(dbms string) string {
 		return "all"
 	}
 	return dbms
+}
+
+// DBMSTwinRule checks that every changeset written for the source engine only has a
+// counterpart (its "twin") for the target engine in the same file, and that twins
+// target exactly the target engine.
+type DBMSTwinRule struct {
+	sincePath       *regexp.Regexp // nil when every file is in scope
+	sourceDBMS      string
+	targetDBMS      string
+	idSuffix        string
+	excludePatterns []string
+	since           int
+}
+
+// NewDBMSTwinRule creates a new dbms-twin rule with configuration.
+func NewDBMSTwinRule(cfg *config.DBMSTwinConfig) *DBMSTwinRule {
+	r := &DBMSTwinRule{
+		sourceDBMS:      strings.ToLower(strings.TrimSpace(cfg.SourceDBMS)),
+		targetDBMS:      strings.ToLower(strings.TrimSpace(cfg.TargetDBMS)),
+		idSuffix:        cfg.IDSuffix,
+		excludePatterns: cfg.ExcludePatterns,
+		since:           cfg.Since,
+	}
+	// An invalid pattern is rejected by config.Validate; ignoring it here checks every file.
+	if cfg.SincePathPattern != "" {
+		if re, err := regexp.Compile(cfg.SincePathPattern); err == nil && re.NumSubexp() > 0 {
+			r.sincePath = re
+		}
+	}
+	return r
+}
+
+// ID returns the unique identifier for this rule.
+func (r *DBMSTwinRule) ID() string {
+	return "dbms-twin"
+}
+
+// Name returns the human-readable name of this rule.
+func (r *DBMSTwinRule) Name() string {
+	return "DBMS Twin"
+}
+
+// Description returns a detailed description of what this rule checks.
+func (r *DBMSTwinRule) Description() string {
+	return "Ensures every changeset written for the source engine only has a twin for the target engine in the same file"
+}
+
+// Severity returns the severity level of violations found by this rule.
+func (r *DBMSTwinRule) Severity() Severity {
+	return SeverityCritical
+}
+
+// Check examines a changelog for violations of this rule.
+func (r *DBMSTwinRule) Check(changelog *parser.Changelog) []Violation {
+	violations := make([]Violation, 0)
+
+	// Twins are looked up in the same file, by author and ID.
+	byFile := make(map[string]map[string]*parser.ChangeSet)
+	for i := range changelog.ChangeSets {
+		cs := &changelog.ChangeSets[i]
+		if byFile[cs.FilePath] == nil {
+			byFile[cs.FilePath] = make(map[string]*parser.ChangeSet)
+		}
+		byFile[cs.FilePath][cs.Author+":"+cs.ID] = cs
+	}
+
+	for i := range changelog.ChangeSets {
+		cs := &changelog.ChangeSets[i]
+		if !r.inScope(cs.FilePath) {
+			continue
+		}
+		ident := cs.Author + ":" + cs.ID
+
+		if strings.HasSuffix(cs.ID, r.idSuffix) {
+			if !r.targetsOnly(cs) {
+				violations = append(violations, changeSetViolation(r, cs, fmt.Sprintf(
+					"changeset %s is a %s twin (%s) but declares dbms:%s. Use dbms:%s.",
+					ident, r.targetDBMS, r.idSuffix, dbmsOrAll(strings.Join(cs.DBMSList, ",")), r.targetDBMS)))
+			}
+			continue
+		}
+
+		if !r.namesSource(cs) || cs.ReachesDBMS(r.targetDBMS) {
+			continue
+		}
+		twin := byFile[cs.FilePath][ident+r.idSuffix]
+		if twin == nil || !twin.ReachesDBMS(r.targetDBMS) {
+			violations = append(violations, changeSetViolation(r, cs, fmt.Sprintf(
+				"changeset %s runs on %s only and has no %s twin. Add changeset %s%s with dbms:%s to this file, or suppress dbms-twin with a reason.",
+				ident, r.sourceDBMS, r.targetDBMS, cs.ID, r.idSuffix, r.targetDBMS)))
+		}
+	}
+
+	return violations
+}
+
+// inScope reports whether the file is checked: not excluded and, when a threshold is
+// configured, matching since_path_pattern with a number at least since.
+func (r *DBMSTwinRule) inScope(filePath string) bool {
+	if matchesAnyPattern(filePath, r.excludePatterns) {
+		return false
+	}
+	if r.sincePath == nil {
+		return true
+	}
+	match := r.sincePath.FindStringSubmatch(filepath.ToSlash(filePath))
+	if match == nil {
+		return false
+	}
+	number, err := strconv.Atoi(match[1])
+	return err == nil && number >= r.since
+}
+
+// namesSource reports whether the changeset lists the source engine explicitly in its dbms.
+func (r *DBMSTwinRule) namesSource(cs *parser.ChangeSet) bool {
+	for _, value := range cs.DBMSList {
+		if strings.ToLower(strings.TrimSpace(value)) == r.sourceDBMS {
+			return true
+		}
+	}
+	return false
+}
+
+// targetsOnly reports whether the changeset declares exactly the target engine.
+func (r *DBMSTwinRule) targetsOnly(cs *parser.ChangeSet) bool {
+	return len(cs.DBMSList) == 1 && strings.ToLower(strings.TrimSpace(cs.DBMSList[0])) == r.targetDBMS
 }
