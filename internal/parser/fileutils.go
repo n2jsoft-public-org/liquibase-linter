@@ -130,75 +130,51 @@ func MatchesResourceFilter(filePath, pattern string) (bool, error) {
 }
 
 // matchesRecursivePattern handles patterns with ** for recursive directory matching.
+// A ** segment matches zero or more directories; other segments are matched with
+// filepath.Match, so * and ? stay within a single segment. A relative pattern may
+// match starting at any directory of the path, so "init/**" matches "/repo/db/init/a.sql".
 // Examples: **/*.sql matches any .sql file at any depth
 //
 //	v*/**/*.xml matches .xml files in subdirectories of directories starting with 'v'
+//	**/init/** matches every file below any directory named init
 //
 // Note: Both filePath and pattern should already be normalized to forward slashes by the caller.
 func matchesRecursivePattern(filePath, pattern string) (bool, error) {
-	// Split pattern by **
-	parts := strings.Split(pattern, "**")
+	// Accept Windows separators even when running on Unix, where filepath.ToSlash keeps them
+	filePath = strings.ReplaceAll(filePath, "\\", "/")
+	pattern = strings.ReplaceAll(pattern, "\\", "/")
 
-	if len(parts) == 1 {
-		// No ** in pattern, use standard matching
-		return filepath.Match(pattern, filePath)
+	patternSegments := strings.Split(pattern, "/")
+	if patternSegments[0] != "**" {
+		patternSegments = append([]string{"**"}, patternSegments...)
 	}
+	return matchSegments(patternSegments, strings.Split(filePath, "/"))
+}
 
-	// Handle single ** (most common case: **/*.ext)
-	if len(parts) == 2 {
-		// Use forward slash since paths are normalized
-		prefix := strings.TrimSuffix(parts[0], "/")
-		suffix := strings.TrimPrefix(parts[1], "/")
-
-		// Check if path starts with prefix (if any)
-		if prefix != "" {
-			if !strings.HasPrefix(filePath, prefix) {
-				// Try matching just the relative part
-				if !strings.Contains(filePath, prefix) {
-					return false, nil
+// matchSegments reports whether the path segments match the pattern segments,
+// where a "**" pattern segment matches zero or more path segments.
+func matchSegments(patternSegments, pathSegments []string) (bool, error) {
+	for len(patternSegments) > 0 {
+		if patternSegments[0] == "**" {
+			for skip := 0; skip <= len(pathSegments); skip++ {
+				matched, err := matchSegments(patternSegments[1:], pathSegments[skip:])
+				if err != nil || matched {
+					return matched, err
 				}
 			}
+			return false, nil
 		}
 
-		// Check if path ends with pattern after **
-		if suffix != "" {
-			matched, err := filepath.Match(suffix, filepath.Base(filePath))
-			if err != nil {
-				return false, err
-			}
-			if !matched {
-				// Try matching with directory structure
-				// Use forward slash for splitting since paths are normalized
-				pathParts := strings.Split(filePath, "/")
-				suffixParts := strings.Split(suffix, "/")
-
-				if len(pathParts) >= len(suffixParts) {
-					// Check if last N parts match suffix pattern
-					for i := 0; i < len(suffixParts); i++ {
-						pathIdx := len(pathParts) - len(suffixParts) + i
-						matched, err := filepath.Match(suffixParts[i], pathParts[pathIdx])
-						if err != nil {
-							return false, err
-						}
-						if !matched {
-							return false, nil
-						}
-					}
-					return true, nil
-				}
-				return false, nil
-			}
-			return true, nil
+		if len(pathSegments) == 0 {
+			return false, nil
 		}
-
-		return true, nil
+		matched, err := filepath.Match(patternSegments[0], pathSegments[0])
+		if err != nil || !matched {
+			return false, err
+		}
+		patternSegments, pathSegments = patternSegments[1:], pathSegments[1:]
 	}
-
-	// Multiple ** - more complex pattern
-	// For now, return true if file matches basic criteria
-	// This is a simplified implementation
-	ext := filepath.Ext(filePath)
-	return strings.HasSuffix(pattern, ext), nil
+	return len(pathSegments) == 0, nil
 }
 
 // ResolveRelativePath resolves a relative path against a base path.
